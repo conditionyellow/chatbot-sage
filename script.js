@@ -1,14 +1,13 @@
-// WARNING: APIキーを直接クライアントサイドに埋め込むのは危険です。
-// 本番環境では必ずバックエンドサーバーを介してAPIリクエストをプロキシしてください。
-const API_KEY = "AIzaSyA0SVNytyuLYf2-RKN42fhXLNHxE6h0E5w"; // ★あなたのAPIキーをここに貼り付けてください★
-const MODEL_NAME = "gemini-2.0-flash"; // または gemini-1.5-pro-latest など、利用可能なモデル名
+// Cloud FunctionsのエンドポイントURL
+// ★ここにデプロイしたCloud FunctionsのURLを貼り付けてください★
+const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-northeast1.run.app";
 
 const chatHistoryDiv = document.getElementById('chat-history');
 const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
 
 // チャット履歴を保持する配列
-// Gemini APIのhistoryフォーマットに合わせる
+// Cloud Functionsに送信する履歴もこの形式で管理します
 let chatMessages = [];
 
 // メッセージをチャット履歴に追加する関数
@@ -23,50 +22,59 @@ function appendMessage(sender, text) {
     chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
 }
 
-// Gemini APIへのリクエストを送信する関数
-async function sendMessageToGemini(message) {
+// Cloud Functions経由でGemini APIへのリクエストを送信する関数
+async function sendMessageToCloudFunction(message) {
     appendMessage('user', message); // ユーザーメッセージを即座に表示
 
     // ローディング表示
-    appendMessage('bot', '思考中...');
+    const thinkingMessageDiv = document.createElement('div');
+    thinkingMessageDiv.classList.add('message', 'bot-message');
+    thinkingMessageDiv.textContent = '思考中...';
+    chatHistoryDiv.appendChild(thinkingMessageDiv);
+    chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; // スクロール
     sendButton.disabled = true;
 
-    // Gemini APIのフォーマットに合わせてチャット履歴を更新
-    chatMessages.push({ role: 'user', parts: [{ text: message }] });
+    // クライアント側で履歴を管理し、毎回Cloud Functionsに送る
+    // Cloud Functions側でこれをそのままGemini APIに渡す
+    chatMessages.push({ role: 'user', text: message });
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
+        const response = await fetch(CLOUD_FUNCTION_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                contents: chatMessages // これまでの会話履歴を送信
+                userMessage: message,
+                chatHistory: chatMessages.slice(0, -1) // 最新のユーザーメッセージを除く履歴を送信
+                                                        // Gemini APIはユーザーメッセージを 'sendMessage' で受け取るため、
+                                                        // 履歴には含まない（あるいは含めてもOK、モデルの挙動による）
             })
         });
 
         if (!response.ok) {
-            // エラーレスポンスの詳細をログに出力
             const errorData = await response.json();
-            console.error('APIエラー:', errorData);
-            throw new Error(`APIリクエストが失敗しました: ${response.status} ${response.statusText} - ${errorData.error ? errorData.error.message : '詳細不明'}`);
+            console.error('Cloud Functionエラー:', errorData);
+            throw new Error(`Cloud Functionリクエストが失敗しました: ${response.status} ${response.statusText} - ${errorData.error ? errorData.error.details : '詳細不明'}`);
         }
 
         const data = await response.json();
-        const botResponseText = data.candidates[0].content.parts[0].text;
+        const botResponseText = data.reply;
 
         // 最新の「思考中...」メッセージを削除
-        chatHistoryDiv.removeChild(chatHistoryDiv.lastChild);
+        chatHistoryDiv.removeChild(thinkingMessageDiv);
 
         appendMessage('bot', botResponseText);
 
-        // モデルの応答をチャット履歴に追加
-        chatMessages.push({ role: 'model', parts: [{ text: botResponseText }] });
+        // ボットの応答をチャット履歴に追加
+        chatMessages.push({ role: 'model', text: botResponseText });
 
     } catch (error) {
         console.error('チャットボットエラー:', error);
         // 最新の「思考中...」メッセージを削除
-        chatHistoryDiv.removeChild(chatHistoryDiv.lastChild);
+        if (chatHistoryDiv.contains(thinkingMessageDiv)) {
+             chatHistoryDiv.removeChild(thinkingMessageDiv);
+        }
         appendMessage('bot', 'エラーが発生しました。もう一度お試しください。');
     } finally {
         sendButton.disabled = false;
@@ -78,7 +86,7 @@ async function sendMessageToGemini(message) {
 sendButton.addEventListener('click', () => {
     const message = userInput.value.trim();
     if (message) {
-        sendMessageToGemini(message);
+        sendMessageToCloudFunction(message);
     }
 });
 
@@ -87,10 +95,7 @@ userInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !sendButton.disabled) {
         const message = userInput.value.trim();
         if (message) {
-            sendMessageToGemini(message);
+            sendMessageToCloudFunction(message);
         }
     }
 });
-
-// 初期メッセージを履歴に追加
-// appendMessage('bot', 'こんにちは！何か質問がありますか？'); // HTMLで直接記述したので不要
