@@ -97,3 +97,38 @@ h1 {
     background-color: #cccccc;
     cursor: not-allowed;
 }
+
+/* 音声制御ボタンのスタイル */
+#voice-toggle, #stop-speech {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-left: 5px;
+    transition: background-color 0.3s ease;
+    min-width: 45px;
+}
+
+#voice-toggle:hover {
+    background-color: #218838;
+}
+
+#stop-speech {
+    background-color: #ffc107;
+}
+
+#stop-speech:hover {
+    background-color: #e0a800;
+}
+
+/* 音声OFFの状態 */
+#voice-toggle.muted {
+    background-color: #6c757d;
+}
+
+#voice-toggle.muted:hover {
+    background-color: #5a6268;
+}
