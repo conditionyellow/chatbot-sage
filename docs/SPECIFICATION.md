@@ -6,9 +6,9 @@
 
 ### バージョン情報
 - **アプリケーション名**: Gemini Chatbot (Cloud Run Edition)
-- **バージョン**: 1.0.0
+- **バージョン**: 1.1.0
 - **作成日**: 2025年6月2日
-- **最終更新**: 2025年6月2日
+- **最終更新**: 2025年6月3日
 
 ---
 
@@ -23,6 +23,7 @@
 - **フロントエンド**: HTML5, CSS3, Vanilla JavaScript
 - **バックエンド**: Google Cloud Run (Proxy Server)
 - **AI API**: Google Gemini API
+- **音声合成**: Web Speech API (SpeechSynthesis)
 - **通信**: Fetch API, JSON
 
 ---
@@ -67,6 +68,7 @@ chatbot_sage/
 #### 1.3 応答機能
 - **応答時間**: Cloud Run + Gemini API処理時間
 - **ローディング表示**: "思考中..." メッセージ
+- **音声読み上げ**: Web Speech API による自動音声合成
 - **エラーハンドリング**: 
   - 接続エラー時の適切なエラーメッセージ
   - 送信ボタンの無効化/有効化
@@ -77,13 +79,24 @@ chatbot_sage/
 - **コンテナ**: 中央配置、固定幅400px
 - **ヘッダー**: "Gemini Chatbot" タイトル
 - **チャット履歴エリア**: 最大高さ400px、スクロール対応
-- **入力エリア**: 下部固定、テキスト入力+送信ボタン
+- **入力エリア**: 下部固定、テキスト入力+送信ボタン+音声制御ボタン
+
+#### 2.2 音声機能
+- **音声ON/OFFボタン**: 🔊/🔇 アイコンで音声合成の有効/無効切り替え
+- **音声停止ボタン**: ⏸️ アイコンで現在の読み上げを即座に停止
+- **自動読み上げ**: ボットの応答メッセージを日本語音声で自動読み上げ
+- **音声設定**: 
+  - 言語: 日本語 (ja-JP)
+  - 読み上げ速度: 0.9倍速
+  - 音の高さ: 1.2倍
+  - 音量: 80%
 
 #### 2.2 スタイル
 - **背景色**: #1E0E07（ダークブラウン）
 - **コンテナ**: 白背景、角丸、シャドウ
 - **メッセージ**: 角丸バブル、左右寄せ
-- **ボタン**: 青色（#007bff）、ホバー効果
+- **送信ボタン**: 青色（#007bff）、ホバー効果
+- **音声ボタン**: 緑色（#28a745）、黄色（#ffc107）
 
 #### 2.3 レスポンシブ対応
 - **最大幅**: 90%（モバイル対応）
@@ -147,12 +160,16 @@ Content-Type: application/json
 const chatHistoryDiv = document.getElementById('chat-history');
 const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
+const voiceToggle = document.getElementById('voice-toggle');
+const stopSpeechButton = document.getElementById('stop-speech');
 ```
 
 #### アプリケーション状態
 ```javascript
 const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-northeast1.run.app";
-let chatMessages = []; // チャット履歴配列
+let chatMessages = [];           // チャット履歴配列
+let isSpeechEnabled = true;      // 音声合成有効フラグ
+let currentSpeechSynthesis = null; // 現在の音声合成オブジェクト
 ```
 
 ### データ構造
@@ -192,11 +209,33 @@ Cloud Run経由でGemini APIにリクエスト送信
 1. ユーザーメッセージを即座に表示
 2. "思考中..." ローディング表示
 3. 送信ボタンを無効化
-4.履歴配列に追加
+4. 履歴配列に追加
 5. fetch APIでリクエスト送信
 6. 応答受信後、ローディング削除
 7. ボット応答を表示・履歴追加
-8. 送信ボタン有効化・入力欄クリア
+8. **音声読み上げ実行**
+9. 送信ボタン有効化・入力欄クリア
+
+### speakText(text)
+Web Speech APIを使用した音声合成
+
+**パラメータ**
+- `text`: string - 読み上げるテキスト
+
+**動作**
+1. 音声有効フラグとAPI対応チェック
+2. 現在の音声合成を停止
+3. SpeechSynthesisUtterance作成
+4. 日本語音声設定適用
+5. 読み上げ開始
+
+### stopSpeech()
+現在の音声読み上げを停止
+
+**動作**
+1. speechSynthesis.cancel()実行
+2. currentSpeechSynthesis変数クリア
+3. コンソールログ出力
 
 ---
 
@@ -218,6 +257,11 @@ Cloud Run経由でGemini APIにリクエスト送信
 - **原因**: Gemini API エラー、レート制限
 - **表示**: "エラーが発生しました。もう一度お試しください。"
 - **ログ**: API エラー詳細
+
+#### 4. 音声合成エラー
+- **原因**: Web Speech API 非対応、音声データの問題
+- **表示**: 音声ボタン非表示、コンソール警告
+- **ログ**: 音声エラー詳細
 
 ### エラー処理の流れ
 1. try-catch でエラーキャッチ
@@ -263,11 +307,12 @@ Cloud Run経由でGemini APIにリクエスト送信
 - **同時リクエスト**: 1つのみ（送信ボタン無効化で制御）
 
 ### 対応ブラウザ
-- **Chrome**: 60+
-- **Firefox**: 60+
-- **Safari**: 12+
-- **Edge**: 79+
+- **Chrome**: 60+ (Web Speech API フルサポート)
+- **Firefox**: 60+ (Web Speech API 限定サポート)
+- **Safari**: 12+ (Web Speech API サポート)
+- **Edge**: 79+ (Web Speech API フルサポート)
 - **モバイル**: iOS Safari 12+, Chrome Mobile 60+
+- **音声合成**: Web Speech API対応ブラウザのみ
 
 ---
 
@@ -316,12 +361,15 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 2. **Live2D機能**: 未実装（modelsフォルダ存在のみ）
 3. **マルチユーザー**: 非対応
 4. **ファイルアップロード**: 非対応
-5. **音声入出力**: 非対応
+5. **音声入力**: 非対応（音声出力のみ実装済み）
+6. **音声品質**: ブラウザ・OS依存
 
 ### 既知の問題
 1. **長時間使用**: メモリリーク可能性（履歴蓄積）
 2. **大量履歴**: パフォーマンス低下可能性
 3. **ネットワーク**: オフライン対応なし
+4. **音声重複**: 同時複数読み上げの制御（対策済み）
+5. **音声品質**: ブラウザによる音声の違い
 
 ---
 
@@ -335,7 +383,8 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 
 ### Phase 2: 機能拡張
 - [ ] Live2Dキャラクター表示
-- [ ] 音声入出力対応
+- [ ] 音声入力対応（音声認識）
+- [ ] 音声設定カスタマイズ（速度、音程、音量）
 - [ ] ファイルアップロード機能
 - [ ] マークダウン対応
 
@@ -375,7 +424,25 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 2. ページリロード
 3. 短いメッセージで再試行
 
-#### Q3: 文字化けが発生
+#### Q4: 音声が再生されない
+**症状**: ボットの応答に音声がない、音声ボタンが表示されない
+**原因**:
+- ブラウザがWeb Speech API に非対応
+- 音声がミュート設定
+- システム音量設定
+
+**対処法**:
+1. ブラウザの対応状況確認（Chrome推奨）
+2. 🔊ボタンで音声ON確認
+3. システム音量・ミュート確認
+4. 日本語音声の利用可能性確認
+
+#### Q5: 音声が2回再生される
+**症状**: 同じメッセージが重複して読み上げられる
+**原因**: speakText()関数の重複呼び出し
+**対処法**: コードの重複チェック、修正済み
+
+#### Q6: 文字化けが発生
 **症状**: 日本語が正しく表示されない
 **原因**: 文字エンコーディング設定
 **対処法**: HTMLのmeta charset="UTF-8"確認
@@ -383,6 +450,14 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 ---
 
 ## 更新履歴
+
+### Version 1.1.0 (2025-06-03)
+- **音声合成機能追加**: Web Speech API による自動読み上げ
+- **音声制御UI追加**: 音声ON/OFF、音声停止ボタン
+- **日本語音声対応**: 自動的に日本語音声を選択・設定
+- **音声設定最適化**: 読み上げ速度、音程、音量の調整
+- **エラーハンドリング強化**: 音声機能のエラー対応
+- **ブラウザ対応情報更新**: Web Speech API 対応状況追記
 
 ### Version 1.0.0 (2025-06-02)
 - 初回リリース
