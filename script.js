@@ -7,23 +7,98 @@ const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
 const voiceToggle = document.getElementById('voice-toggle');
 const stopSpeechButton = document.getElementById('stop-speech');
+const voiceEngineToggle = document.getElementById('voice-engine-toggle');
 
 // 音声合成の設定
 let isSpeechEnabled = true;
 let currentSpeechSynthesis = null;
+let voiceEngine = 'webspeech'; // 'webspeech' または 'google-tts'
+let currentAudio = null; // Google TTS用のAudioオブジェクト
+
+// Text-to-Speech APIのエンドポイント（Cloud Functionsで実装予定）
+const TTS_API_URL = "https://gemini-chatbot-proxy-636074041441.asia-northeast1.run.app/tts";
 
 // Web Speech API の音声合成をチェック
 if ('speechSynthesis' in window) {
     console.log('Web Speech API is supported!');
 } else {
     console.warn('Web Speech API is not supported in this browser.');
-    voiceToggle.style.display = 'none';
-    stopSpeechButton.style.display = 'none';
+    voiceEngine = 'google-tts'; // Web Speech API非対応の場合はGoogle TTSに切り替え
 }
 
-// 音声で読み上げる関数
-function speakText(text) {
-    if (!isSpeechEnabled || !('speechSynthesis' in window)) {
+// 音声エンジン表示を更新
+function updateVoiceEngineDisplay() {
+    const engineText = voiceEngine === 'webspeech' ? 'Web' : 'GCP';
+    voiceEngineToggle.textContent = `🎵${engineText}`;
+    voiceEngineToggle.title = `音声エンジン: ${voiceEngine === 'webspeech' ? 'Web Speech API' : 'Google Cloud TTS'}`;
+}
+
+// Google Cloud Text-to-Speech APIを使用した音声合成
+async function speakTextWithGoogleTTS(text) {
+    try {
+        const response = await fetch(TTS_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: text,
+                languageCode: 'ja-JP',
+                voiceName: 'ja-JP-Neural2-B', // 女性の声
+                audioEncoding: 'MP3'
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Google TTS API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Base64エンコードされた音声データをAudioオブジェクトで再生
+        const audioBlob = new Blob([Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))], {
+            type: 'audio/mp3'
+        });
+        
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // 現在の音声を停止
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        
+        currentAudio = new Audio(audioUrl);
+        currentAudio.volume = 0.8;
+        
+        currentAudio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            currentAudio = null;
+            console.log('Google TTS 音声読み上げ終了');
+        };
+        
+        currentAudio.onerror = (error) => {
+            console.error('Google TTS 音声再生エラー:', error);
+            currentAudio = null;
+        };
+        
+        await currentAudio.play();
+        console.log('Google TTS 音声読み上げ開始');
+        
+    } catch (error) {
+        console.error('Google TTS エラー:', error);
+        // Google TTSが失敗した場合はWeb Speech APIにフォールバック
+        if (voiceEngine === 'google-tts' && 'speechSynthesis' in window) {
+            console.log('Google TTSエラーのため、Web Speech APIにフォールバック');
+            speakTextWithWebSpeech(text);
+        }
+    }
+}
+
+// Web Speech APIを使用した音声合成（既存の関数を分離）
+function speakTextWithWebSpeech(text) {
+    if (!('speechSynthesis' in window)) {
+        console.warn('Web Speech API is not supported');
         return;
     }
     
@@ -55,17 +130,17 @@ function speakText(text) {
     
     // イベントリスナー
     utterance.onstart = function() {
-        console.log('音声読み上げ開始');
+        console.log('Web Speech 音声読み上げ開始');
         currentSpeechSynthesis = utterance;
     };
     
     utterance.onend = function() {
-        console.log('音声読み上げ終了');
+        console.log('Web Speech 音声読み上げ終了');
         currentSpeechSynthesis = null;
     };
     
     utterance.onerror = function(event) {
-        console.error('音声読み上げエラー:', event.error);
+        console.error('Web Speech 音声読み上げエラー:', event.error);
         currentSpeechSynthesis = null;
     };
     
@@ -73,13 +148,34 @@ function speakText(text) {
     speechSynthesis.speak(utterance);
 }
 
-// 音声停止関数
+// 音声で読み上げる関数（エンジン選択対応）
+function speakText(text) {
+    if (!isSpeechEnabled) {
+        return;
+    }
+    
+    if (voiceEngine === 'google-tts') {
+        speakTextWithGoogleTTS(text);
+    } else {
+        speakTextWithWebSpeech(text);
+    }
+}
+
+// 音声停止関数（両エンジン対応）
 function stopSpeech() {
+    // Web Speech API の停止
     if ('speechSynthesis' in window) {
         speechSynthesis.cancel();
         currentSpeechSynthesis = null;
-        console.log('音声読み上げを停止しました');
     }
+    
+    // Google TTS の停止
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+    
+    console.log('音声読み上げを停止しました');
 }
 
 // チャット履歴を保持する配列
@@ -197,6 +293,27 @@ voiceToggle.addEventListener('click', () => {
 stopSpeechButton.addEventListener('click', () => {
     stopSpeech();
 });
+
+// 音声エンジン切り替えボタンのイベントリスナー
+voiceEngineToggle.addEventListener('click', () => {
+    // 現在の音声を停止
+    stopSpeech();
+    
+    // エンジンを切り替え
+    voiceEngine = voiceEngine === 'webspeech' ? 'google-tts' : 'webspeech';
+    
+    // Web Speech API非対応の場合はGoogle TTSのみ
+    if (voiceEngine === 'webspeech' && !('speechSynthesis' in window)) {
+        voiceEngine = 'google-tts';
+        console.warn('Web Speech API非対応のため、Google TTSを継続使用');
+    }
+    
+    updateVoiceEngineDisplay();
+    console.log('音声エンジン切り替え:', voiceEngine);
+});
+
+// 初期表示を設定
+updateVoiceEngineDisplay();
 
 // 音声リストが読み込まれた後に日本語音声をセットアップ
 speechSynthesis.addEventListener('voiceschanged', () => {
