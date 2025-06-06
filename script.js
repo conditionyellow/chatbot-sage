@@ -119,6 +119,11 @@ async function speakTextWithGoogleTTS(text) {
             URL.revokeObjectURL(audioUrl);
             currentAudio = null;
             console.log('Google TTS 音声読み上げ終了');
+            
+            // Live2Dキャラクターの音声終了アニメーション
+            if (window.Live2DController) {
+                window.Live2DController.onSpeechEnd();
+            }
         };
         
         currentAudio.onerror = (error) => {
@@ -218,6 +223,11 @@ async function speakTextWithAivisSpeech(text) {
             URL.revokeObjectURL(audioUrl);
             currentAudio = null;
             console.log('AivisSpeech 音声読み上げ終了');
+            
+            // Live2Dキャラクターの音声終了アニメーション
+            if (window.Live2DController) {
+                window.Live2DController.onSpeechEnd();
+            }
         };
 
         currentAudio.onerror = (error) => {
@@ -323,11 +333,21 @@ function speakTextWithWebSpeech(text) {
     utterance.onend = function() {
         console.log('Web Speech 音声読み上げ終了');
         currentSpeechSynthesis = null;
+        
+        // Live2Dキャラクターの音声終了アニメーション
+        if (window.Live2DController) {
+            window.Live2DController.onSpeechEnd();
+        }
     };
     
     utterance.onerror = function(event) {
         console.error('Web Speech 音声読み上げエラー:', event.error);
         currentSpeechSynthesis = null;
+        
+        // エラー時もLive2Dアニメーションを停止
+        if (window.Live2DController) {
+            window.Live2DController.onSpeechEnd();
+        }
     };
     
     // 読み上げ開始
@@ -360,6 +380,11 @@ function speakText(text) {
     
     console.log('🎵 音声エンジン:', voiceEngine, '| テキスト:', cleanText);
     
+    // Live2Dキャラクターの音声開始アニメーション
+    if (window.Live2DController) {
+        window.Live2DController.onSpeechStart();
+    }
+    
     switch (voiceEngine) {
         case 'google-tts':
             speakTextWithGoogleTTS(cleanText);
@@ -386,6 +411,11 @@ function stopSpeech() {
     if (currentAudio) {
         currentAudio.pause();
         currentAudio = null;
+    }
+    
+    // Live2Dキャラクターの音声停止アニメーション
+    if (window.Live2DController) {
+        window.Live2DController.onSpeechEnd();
     }
     
     console.log('音声読み上げを停止しました');

@@ -3,26 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini チャットボット</title>
+    <title>Gemini チャットボット with Live2D</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Live2D Cubism Core SDK -->
+    <script src="SDK/CubismSdkForWeb-5-r.4/Core/live2dcubismcore.min.js"></script>
+    <!-- PIXI.js -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.2.4/dist/pixi.min.js"></script>
+    <!-- PIXI Live2D Display - Cubism 4 Bundle -->
+    <script src="libs/cubism4.min.js"></script>
 </head>
 <body>
-    <div class="chatbot-container">
-        <h1>Gemini Chatbot</h1>
-        <div class="chat-history" id="chat-history">
-            <div class="message bot-message">こんにちは！何か質問がありますか？</div>
+    <div class="app-container">
+        <!-- Live2D キャラクター表示エリア -->
+        <div class="live2d-container">
+            <!-- Canvas は JavaScript で動的に作成されます -->
+            <div class="character-controls">
+                <button id="expression-happy" title="笑顔">😊</button>
+                <button id="expression-surprised" title="驚き">😮</button>
+                <button id="expression-sad" title="悲しみ">😢</button>
+                <button id="expression-angry" title="怒り">😠</button>
+                <button id="expression-normal" title="通常">😐</button>
+            </div>
         </div>
-        <div class="chat-input-area">
-            <input type="text" id="user-input" placeholder="メッセージを入力...">
-            <div class="button-group">
-                <button id="send-button">送信</button>
-                <button id="voice-toggle" title="音声ON/OFF">🔊</button>
-                <button id="stop-speech" title="音声停止">⏸️</button>
-                <button id="voice-engine-toggle" title="音声エンジン切り替え">🎵</button>
+        
+        <!-- チャットボットエリア -->
+        <div class="chatbot-container">
+            <h1>Gemini Chatbot with Chloe</h1>
+            <div class="chat-history" id="chat-history">
+                <div class="message bot-message">こんにちは！私はChloeです。何か質問がありますか？</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="user-input" placeholder="メッセージを入力...">
+                <div class="button-group">
+                    <button id="send-button">送信</button>
+                    <button id="voice-toggle" title="音声ON/OFF">🔊</button>
+                    <button id="stop-speech" title="音声停止">⏸️</button>
+                    <button id="voice-engine-toggle" title="音声エンジン切り替え">🎵</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Live2D PIXI Integration Script -->
+    <script src="live2d-pixi.js"></script>
+    <!-- Main Chatbot Script -->
     <script src="script.js"></script>
 </body>
 </html>
