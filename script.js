@@ -147,9 +147,13 @@ async function speakTextWithGoogleTTS(text) {
 // AivisSpeech Engineを使用した音声合成
 async function speakTextWithAivisSpeech(text) {
     try {
+        console.log('=== AivisSpeech 音声合成開始 ===');
+        console.log('テキスト:', text);
+        console.log('AIVIS_API_URL:', AIVIS_API_URL);
+        
         // AivisSpeech Engine APIで音声合成を実行（クエリパラメータ形式）
-        // スピーカーID: 888753760 = Anneli ノーマル
-        const speakerID = 888753760; // Anneliのノーマル音声
+        // スピーカーID: 1310138976 = 阿井田 茂 ノーマル（現在利用可能）
+        const speakerID = 1310138976; // 阿井田 茂のノーマル音声
         const audioQueryURL = `${AIVIS_API_URL}/audio_query?text=${encodeURIComponent(text)}&speaker=${speakerID}`;
         
         console.log('AivisSpeech audio_query URL:', audioQueryURL);
@@ -164,6 +168,12 @@ async function speakTextWithAivisSpeech(text) {
             headers: {
                 'accept': 'application/json'
             }
+        }).catch(error => {
+            console.error('=== CORS/Network エラー (audio_query) ===');
+            console.error('Error type:', error.name);
+            console.error('Error message:', error.message);
+            console.error('これはCORS設定が原因の可能性があります');
+            throw error;
         });
         
         console.log('Audio query response status:', response.status);
@@ -190,6 +200,12 @@ async function speakTextWithAivisSpeech(text) {
                 'accept': 'audio/wav'
             },
             body: JSON.stringify(audioQuery)
+        }).catch(error => {
+            console.error('=== CORS/Network エラー (synthesis) ===');
+            console.error('Error type:', error.name);
+            console.error('Error message:', error.message);
+            console.error('これはCORS設定が原因の可能性があります');
+            throw error;
         });
         
         console.log('Synthesis response status:', synthesisResponse.status);
@@ -206,6 +222,11 @@ async function speakTextWithAivisSpeech(text) {
         console.log('AivisSpeech synthesis 成功、音声データサイズ:', audioBlob.size, 'bytes');
         console.log('Audio blob type:', audioBlob.type);
         
+        // Blobが空でないことを確認
+        if (audioBlob.size === 0) {
+            throw new Error('受信した音声データが空です');
+        }
+        
         const audioUrl = URL.createObjectURL(audioBlob);
         console.log('Audio URL created:', audioUrl);
 
@@ -218,6 +239,7 @@ async function speakTextWithAivisSpeech(text) {
         currentAudio = new Audio(audioUrl);
         currentAudio.volume = 0.8;
         console.log('Audio element created, volume set to:', currentAudio.volume);
+        console.log('Audio src:', currentAudio.src);
 
         currentAudio.onended = () => {
             URL.revokeObjectURL(audioUrl);
@@ -233,6 +255,8 @@ async function speakTextWithAivisSpeech(text) {
         currentAudio.onerror = (error) => {
             console.error('AivisSpeech 音声再生エラー:', error);
             console.error('Audio エラー詳細:', error.target.error);
+            console.error('Audio networkState:', currentAudio.networkState);
+            console.error('Audio readyState:', currentAudio.readyState);
             currentAudio = null;
         };
 
@@ -249,6 +273,13 @@ async function speakTextWithAivisSpeech(text) {
         try {
             // ブラウザの自動再生ポリシーを考慮した再生試行
             console.log('音声再生を試行中...');
+            
+            // Live2Dキャラクターの音声開始アニメーション
+            if (window.Live2DController) {
+                console.log('Live2D音声開始アニメーション実行');
+                window.Live2DController.onSpeechStart();
+            }
+            
             await currentAudio.play();
             console.log('AivisSpeech 音声読み上げ開始');
         } catch (playError) {

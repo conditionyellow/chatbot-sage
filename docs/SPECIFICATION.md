@@ -192,7 +192,7 @@ chatbot_sage/
     - エンコーディング: MP3
     - 音量: 80%
   - **AivisSpeech Engine**:
-    - スピーカー: 888753760 (Anneli ノーマル)
+    - スピーカー: 1310138976 (阿井田 茂 ノーマル)
     - サンプリングレート: 44.1kHz
     - エンコーディング: WAV
     - 音量: 80%
@@ -306,11 +306,11 @@ http://127.0.0.1:10101
 
 **パラメータ**
 - `text`: 合成するテキスト（URLエンコード済み）
-- `speaker`: スピーカーID（例: 888753760）
+- `speaker`: スピーカーID（例: 1310138976）
 
 **リクエスト例**
 ```
-POST /audio_query?text=%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF&speaker=888753760
+POST /audio_query?text=%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF&speaker=1310138976
 ```
 
 **レスポンス**
@@ -463,7 +463,7 @@ AivisSpeech Engineを使用した音声合成
 
 **動作**
 1. `/audio_query` APIで音声クエリ作成
-   - スピーカーID: 888753760 (Anneli ノーマル)
+   - スピーカーID: 1310138976 (阿井田 茂 ノーマル)
    - クエリパラメータ形式でリクエスト
 2. `/synthesis` APIでWAVファイル生成
    - 音声クエリをJSONボディで送信
@@ -872,7 +872,7 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 2. **ポート競合**: 他のアプリケーションがポート10101を使用していないか確認
 3. **URLエンコーディング**: 日本語テキストの正しいエンコーディング（自動処理済み）
 4. **APIリクエスト形式**: audio_queryとsynthesisの2段階リクエスト（実装済み）
-5. **スピーカーID**: 正しいスピーカーID (888753760) の使用（設定済み）
+5. **スピーカーID**: 正しいスピーカーID (1310138976) の使用（設定済み）
 
 #### Q6: 音声エンジンが切り替わらない
 **症状**: 🎵ボタンをクリックしても音声エンジンが変わらない
@@ -942,7 +942,7 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 ### Version 1.2.0 (2025-06-06)
 - **マルチ音声エンジン対応**: Web Speech API、Google Cloud TTS、AivisSpeech Engine の3つの音声エンジンをサポート
 - **AivisSpeech Engine統合**: 高品質日本語音声合成エンジンの完全統合
-  - スピーカー: Anneli (ID: 888753760) ノーマル音声
+  - スピーカー: 阿井田 茂 (ID: 1310138976) ノーマル音声
   - 2段階API (audio_query → synthesis) による音声生成
   - WAVフォーマット、44.1kHz高品質音声
 - **音声エンジン循環切り替え**: 🎵ボタンで3つのエンジンを順次切り替え
@@ -992,5 +992,17 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 
 ---
 
-*このドキュメントは Gemini Chatbot with Live2D (Chloe Edition) v2.0.0 の技術仕様を記載しています。*
+## 更新履歴
+
+### Version 2.1.1 (2025-06-07)
+- **AivisSpeech Engine スピーカー修正**: 利用可能なスピーカーに変更
+  - スピーカー変更: Anneli (ID: 888753760) → 阿井田 茂 (ID: 1310138976)
+  - 音声品質テスト完了: WAVファイル生成・再生確認済み
+  - ドキュメント更新: 全ての関連箇所のスピーカーID統一
+- **音声エンジン安定性向上**: 実在スピーカーによる確実な音声合成
+- **API仕様更新**: 正しいスピーカーID使用例の記載
+
+### Version 2.1.0 (2025-06-07)
+
+*このドキュメントは Gemini Chatbot with Live2D (Chloe Edition) v2.1.1 の技術仕様を記載しています。*
 *Live2D統合により、リアルタイムキャラクターアニメーションと音声連携機能を提供します。*
