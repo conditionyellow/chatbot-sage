@@ -6,9 +6,9 @@
 
 ### バージョン情報
 - **アプリケーション名**: Gemini Chatbot (Cloud Run Edition)
-- **バージョン**: 1.1.0
+- **バージョン**: 1.2.0
 - **作成日**: 2025年6月2日
-- **最終更新**: 2025年6月3日
+- **最終更新**: 2025年6月6日
 
 ---
 
@@ -23,7 +23,10 @@
 - **フロントエンド**: HTML5, CSS3, Vanilla JavaScript
 - **バックエンド**: Google Cloud Run (Proxy Server)
 - **AI API**: Google Gemini API
-- **音声合成**: Web Speech API (SpeechSynthesis)
+- **音声合成**: 
+  - Web Speech API (SpeechSynthesis) - ブラウザ内蔵
+  - Google Cloud Text-to-Speech API - クラウドベース高品質音声
+  - AivisSpeech Engine - ローカル高品質日本語音声合成
 - **通信**: Fetch API, JSON
 
 ---
@@ -84,12 +87,30 @@ chatbot_sage/
 #### 2.2 音声機能
 - **音声ON/OFFボタン**: 🔊/🔇 アイコンで音声合成の有効/無効切り替え
 - **音声停止ボタン**: ⏸️ アイコンで現在の読み上げを即座に停止
-- **自動読み上げ**: ボットの応答メッセージを日本語音声で自動読み上げ
+- **音声エンジン切り替えボタン**: 🎵 ボタンで音声エンジンを循環切り替え
+- **対応音声エンジン**:
+  1. **Web Speech API** (🎵Web): ブラウザ内蔵、無料、即座に利用可能
+  2. **Google Cloud TTS** (🎵GCP): 高品質、クラウドベース、API利用料金あり
+  3. **AivisSpeech Engine** (🎵Aivis): 最高品質日本語音声、ローカル実行、無料
+- **自動読み上げ**: ボットの応答メッセージを選択した音声エンジンで自動読み上げ
 - **音声設定**: 
-  - 言語: 日本語 (ja-JP)
-  - 読み上げ速度: 0.9倍速
-  - 音の高さ: 1.2倍
-  - 音量: 80%
+  - **Web Speech API**:
+    - 言語: 日本語 (ja-JP)
+    - 読み上げ速度: 0.9倍速
+    - 音の高さ: 1.2倍
+    - 音量: 80%
+  - **Google Cloud TTS**:
+    - 言語: ja-JP
+    - 声質: ja-JP-Neural2-B (女性)
+    - エンコーディング: MP3
+    - 音量: 80%
+  - **AivisSpeech Engine**:
+    - スピーカー: 888753760 (Anneli ノーマル)
+    - サンプリングレート: 44.1kHz
+    - エンコーディング: WAV
+    - 音量: 80%
+- **自動フォールバック**: 選択したエンジンでエラーが発生した場合、自動的にWeb Speech APIにフォールバック
+- **自動再生ポリシー対応**: ブラウザの自動再生制限に対応、ユーザーアクション後の再生試行
 
 #### 2.2 スタイル
 - **背景色**: #1E0E07（ダークブラウン）
@@ -149,6 +170,90 @@ Content-Type: application/json
 }
 ```
 
+### Google Cloud Text-to-Speech API
+
+#### URL
+```
+https://gemini-chatbot-proxy-636074041441.asia-northeast1.run.app/tts
+```
+
+#### POST リクエスト
+テキストの音声合成
+
+**リクエストボディ**
+```json
+{
+  "text": "合成するテキスト",
+  "languageCode": "ja-JP",
+  "voiceName": "ja-JP-Neural2-B",
+  "audioEncoding": "MP3"
+}
+```
+
+**レスポンス**
+```json
+{
+  "audioContent": "base64エンコードされた音声データ"
+}
+```
+
+### AivisSpeech Engine API
+
+#### ベースURL
+```
+http://127.0.0.1:10101
+```
+
+#### GET /version
+エンジンのバージョン情報とヘルスチェック
+
+**レスポンス**
+```json
+{
+  "version": "1.1.0-dev"
+}
+```
+
+#### POST /audio_query
+音声合成用クエリの作成
+
+**パラメータ**
+- `text`: 合成するテキスト（URLエンコード済み）
+- `speaker`: スピーカーID（例: 888753760）
+
+**リクエスト例**
+```
+POST /audio_query?text=%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF&speaker=888753760
+```
+
+**レスポンス**
+```json
+{
+  "accent_phrases": [...],
+  "speedScale": 1.0,
+  "intonationScale": 1.0,
+  "outputSamplingRate": 44100,
+  ...
+}
+```
+
+#### POST /synthesis
+音声ファイルの生成
+
+**パラメータ**
+- `speaker`: スピーカーID
+
+**リクエストボディ**
+```json
+{
+  "accent_phrases": [...],
+  "speedScale": 1.0,
+  ...
+}
+```
+
+**レスポンス**: WAVファイル（audio/wav）
+
 ---
 
 ## 状態管理
@@ -162,14 +267,20 @@ const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
 const voiceToggle = document.getElementById('voice-toggle');
 const stopSpeechButton = document.getElementById('stop-speech');
+const voiceEngineToggle = document.getElementById('voice-engine-toggle');
 ```
 
 #### アプリケーション状態
 ```javascript
 const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-northeast1.run.app";
-let chatMessages = [];           // チャット履歴配列
-let isSpeechEnabled = true;      // 音声合成有効フラグ
-let currentSpeechSynthesis = null; // 現在の音声合成オブジェクト
+const TTS_API_URL = "https://gemini-chatbot-proxy-636074041441.asia-northeast1.run.app/tts";
+const AIVIS_API_URL = "http://127.0.0.1:10101";
+
+let chatMessages = [];              // チャット履歴配列
+let isSpeechEnabled = true;         // 音声合成有効フラグ
+let voiceEngine = 'webspeech';      // 音声エンジン: 'webspeech' | 'google-tts' | 'aivis'
+let currentSpeechSynthesis = null;  // 現在のWeb Speech APIオブジェクト
+let currentAudio = null;            // 現在のAudioオブジェクト（GCP TTS/AivisSpeech用）
 ```
 
 ### データ構造
@@ -213,11 +324,106 @@ Cloud Run経由でGemini APIにリクエスト送信
 5. fetch APIでリクエスト送信
 6. 応答受信後、ローディング削除
 7. ボット応答を表示・履歴追加
-8. **音声読み上げ実行**
+8. **選択した音声エンジンで音声読み上げ実行**
 9. 送信ボタン有効化・入力欄クリア
 
 ### speakText(text)
+選択された音声エンジンでテキストを音声合成
+
+**パラメータ**
+- `text`: string - 読み上げるテキスト
+
+**動作**
+1. 音声が無効の場合は早期リターン
+2. 絵文字を除去（removeEmojis関数使用）
+3. 選択されたvoiceEngineに応じて適切な関数を呼び出し
+   - 'webspeech': speakTextWithWebSpeech()
+   - 'google-tts': speakTextWithGoogleTTS()
+   - 'aivis': speakTextWithAivisSpeech()
+
+### speakTextWithWebSpeech(text)
 Web Speech APIを使用した音声合成
+
+**パラメータ**
+- `text`: string - 読み上げるテキスト
+
+**動作**
+1. Web Speech API対応チェック
+2. 現在の音声を停止
+3. SpeechSynthesisUtteranceオブジェクト作成
+4. 日本語音声設定（言語、速度、音程、音量）
+5. 音声読み上げ開始
+6. イベントリスナー設定（start、end、error）
+
+### speakTextWithGoogleTTS(text)
+Google Cloud Text-to-Speech APIを使用した音声合成
+
+**パラメータ**
+- `text`: string - 読み上げるテキスト
+
+**動作**
+1. TTS_API_URLにPOSTリクエスト送信
+2. 日本語女性音声（ja-JP-Neural2-B）でMP3生成
+3. Base64音声データをBlobに変換
+4. Audioオブジェクトで再生
+5. エラー時はWeb Speech APIにフォールバック
+
+### speakTextWithAivisSpeech(text)
+AivisSpeech Engineを使用した音声合成
+
+**パラメータ**
+- `text`: string - 読み上げるテキスト
+
+**動作**
+1. `/audio_query` APIで音声クエリ作成
+   - スピーカーID: 888753760 (Anneli ノーマル)
+   - クエリパラメータ形式でリクエスト
+2. `/synthesis` APIでWAVファイル生成
+   - 音声クエリをJSONボディで送信
+3. 生成されたWAVデータをBlobに変換
+4. Audioオブジェクトで再生
+5. 自動再生ポリシー対応（ユーザーアクション後の再試行）
+6. エラー時はWeb Speech APIにフォールバック
+
+### checkAivisSpeechEngine()
+AivisSpeech Engineの起動状況確認
+
+**戻り値**
+- `boolean`: エンジンが起動していればtrue
+
+**動作**
+1. `/version` エンドポイントにGETリクエスト
+2. 3秒タイムアウト設定
+3. 正常応答でtrue、エラーでfalseを返す
+
+### updateVoiceEngineDisplay()
+音声エンジン表示の更新
+
+**動作**
+1. voiceEngine変数の値を確認
+2. 対応するアイコンテキストと説明を設定
+3. ボタンの表示テキストとツールチップを更新
+
+### stopSpeech()
+全音声エンジンの再生停止
+
+**動作**
+1. Web Speech API: speechSynthesis.cancel()
+2. Audio要素: pause()とnull代入
+3. 現在再生中の音声をすべて停止
+
+### removeEmojis(text)
+テキストから絵文字を除去
+
+**パラメータ**
+- `text`: string - 処理対象テキスト
+
+**戻り値**
+- `string`: 絵文字を除去したテキスト
+
+**動作**
+1. Unicode絵文字ブロックの正規表現で除去
+2. トリム処理を実行
 
 **パラメータ**
 - `text`: string - 読み上げるテキスト
@@ -259,9 +465,21 @@ Web Speech APIを使用した音声合成
 - **ログ**: API エラー詳細
 
 #### 4. 音声合成エラー
-- **原因**: Web Speech API 非対応、音声データの問題
-- **表示**: 音声ボタン非表示、コンソール警告
-- **ログ**: 音声エラー詳細
+- **Web Speech API エラー**:
+  - 原因: ブラウザ非対応、音声データの問題
+  - 表示: コンソール警告
+  - ログ: 音声エラー詳細
+- **Google Cloud TTS エラー**:
+  - 原因: API認証エラー、ネットワーク問題、クォータ超過
+  - 表示: コンソールエラー
+  - フォールバック: Web Speech APIに自動切り替え
+- **AivisSpeech Engine エラー**:
+  - 原因: エンジン未起動、ポート接続問題、APIリクエスト形式エラー
+  - 表示: 詳細なデバッグログとエラーメッセージ
+  - フォールバック: Web Speech APIに自動切り替え
+- **自動再生ポリシーエラー**:
+  - 原因: ブラウザの自動再生制限
+  - 対処: ユーザーアクション後の再生試行、アラート表示
 
 ### エラー処理の流れ
 1. try-catch でエラーキャッチ
@@ -362,14 +580,18 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 3. **マルチユーザー**: 非対応
 4. **ファイルアップロード**: 非対応
 5. **音声入力**: 非対応（音声出力のみ実装済み）
-6. **音声品質**: ブラウザ・OS依存
+6. **AivisSpeech Engine**: ローカル起動が必要（ポート10101）
+7. **Google Cloud TTS**: API利用料金発生、ネットワーク必須
+8. **音声エンジン設定**: UIでの詳細設定変更不可（コード内固定）
 
 ### 既知の問題
 1. **長時間使用**: メモリリーク可能性（履歴蓄積）
 2. **大量履歴**: パフォーマンス低下可能性
-3. **ネットワーク**: オフライン対応なし
+3. **ネットワーク**: オフライン対応なし（AivisSpeech除く）
 4. **音声重複**: 同時複数読み上げの制御（対策済み）
-5. **音声品質**: ブラウザによる音声の違い
+5. **音声品質**: ブラウザ・エンジンによる音声の違い
+6. **AivisSpeech依存**: ローカルエンジンの起動状態に依存
+7. **自動再生制限**: ブラウザポリシーによる初回再生制限
 
 ---
 
@@ -384,8 +606,11 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 ### Phase 2: 機能拡張
 - [ ] Live2Dキャラクター表示
 - [ ] 音声入力対応（音声認識）
-- [ ] 音声設定カスタマイズ（速度、音程、音量）
+- [ ] 音声設定カスタマイズUI（速度、音程、音量、スピーカー選択）
+- [ ] AivisSpeech複数スピーカー対応（ずんだもん等）
 - [ ] ファイルアップロード機能
+- [x] マルチ音声エンジン対応（完了）
+- [ ] 音声品質設定（サンプリングレート等）
 - [ ] マークダウン対応
 
 ### Phase 3: 高度な機能
@@ -426,30 +651,81 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 
 #### Q4: 音声が再生されない
 **症状**: ボットの応答に音声がない、音声ボタンが表示されない
-**原因**:
-- ブラウザがWeb Speech API に非対応
-- 音声がミュート設定
-- システム音量設定
+**原因と対処法**:
 
-**対処法**:
+**共通**:
+1. 🔊ボタンで音声ON確認
+2. システム音量・ミュート確認
+3. ブラウザの音量設定確認
+
+**Web Speech API (🎵Web)**:
 1. ブラウザの対応状況確認（Chrome推奨）
-2. 🔊ボタンで音声ON確認
-3. システム音量・ミュート確認
-4. 日本語音声の利用可能性確認
+2. 日本語音声の利用可能性確認
+3. マイクロソフトエッジの場合、日本語音声パックのインストール
 
-#### Q5: 音声が2回再生される
+**Google Cloud TTS (🎵GCP)**:
+1. ネットワーク接続確認
+2. Cloud Run サーバーの動作確認
+3. API認証・クォータ確認
+4. 開発者ツールのNetworkタブでHTTPエラー確認
+
+**AivisSpeech Engine (🎵Aivis)**:
+1. AivisSpeech Engineの起動確認 (http://127.0.0.1:10101)
+2. ポート10101の使用可能性確認
+3. 開発者ツールのConsoleでデバッグログ確認
+4. CORSエラーの確認
+
+#### Q5: AivisSpeech Engineが動作しない
+**症状**: 🎵Aivis選択時に音声が再生されない、エラーログが出力される
+**原因と対処法**:
+1. **エンジン未起動**: AivisSpeech Engineを起動してください
+2. **ポート競合**: 他のアプリケーションがポート10101を使用していないか確認
+3. **URLエンコーディング**: 日本語テキストの正しいエンコーディング（自動処理済み）
+4. **APIリクエスト形式**: audio_queryとsynthesisの2段階リクエスト（実装済み）
+5. **スピーカーID**: 正しいスピーカーID (888753760) の使用（設定済み）
+
+#### Q6: 音声エンジンが切り替わらない
+**症状**: 🎵ボタンをクリックしても音声エンジンが変わらない
+**原因と対処法**:
+1. **AivisSpeech Engine接続確認**: エンジンが起動していない場合は選択できません
+2. **ブラウザ再読み込み**: ページを再読み込みして初期化
+3. **JavaScript エラー**: 開発者ツールのConsoleでエラー確認
+
+#### Q7: 音声が2回再生される
 **症状**: 同じメッセージが重複して読み上げられる
 **原因**: speakText()関数の重複呼び出し
 **対処法**: コードの重複チェック、修正済み
 
-#### Q6: 文字化けが発生
+#### Q8: 文字化けが発生
 **症状**: 日本語が正しく表示されない
 **原因**: 文字エンコーディング設定
 **対処法**: HTMLのmeta charset="UTF-8"確認
 
+#### Q9: 自動再生がブロックされる
+**症状**: 「音声再生にはクリックが必要です」のアラートが表示される
+**原因**: ブラウザの自動再生ポリシー
+**対処法**: 
+1. アラートの「OK」をクリック
+2. ページ内で一度クリックしてからメッセージ送信
+3. ブラウザの自動再生設定を許可に変更
+
 ---
 
 ## 更新履歴
+
+### Version 1.2.0 (2025-06-06)
+- **マルチ音声エンジン対応**: Web Speech API、Google Cloud TTS、AivisSpeech Engine の3つの音声エンジンをサポート
+- **AivisSpeech Engine統合**: 高品質日本語音声合成エンジンの完全統合
+  - スピーカー: Anneli (ID: 888753760) ノーマル音声
+  - 2段階API (audio_query → synthesis) による音声生成
+  - WAVフォーマット、44.1kHz高品質音声
+- **音声エンジン循環切り替え**: 🎵ボタンで3つのエンジンを順次切り替え
+- **自動フォールバック機能**: エラー時にWeb Speech APIへの自動切り替え
+- **自動再生ポリシー対応**: ブラウザの自動再生制限への対応とユーザーアクション後の再試行
+- **詳細デバッグログ**: 音声エンジンの状態とAPIコールの詳細ログ
+- **エラーハンドリング強化**: 各音声エンジン固有のエラー処理と詳細メッセージ
+- **CORS対応**: AivisSpeech Engine のCROSヘッダー確認済み
+- **絵文字除去機能**: 音声合成前の自動絵文字フィルタリング
 
 ### Version 1.1.0 (2025-06-03)
 - **音声合成機能追加**: Web Speech API による自動読み上げ
@@ -474,9 +750,15 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 - **Google Cloud Run**: Google Cloud Platform利用規約に準拠
 
 ### 注意事項
-- **API使用料**: Gemini API の利用料金に注意
+- **API使用料**: 
+  - Gemini API の利用料金に注意
+  - Google Cloud TTS API の利用料金に注意
 - **利用規約**: Google Cloud Platform 利用規約の遵守
 - **レート制限**: API使用量制限の管理が必要
+- **AivisSpeech Engine**: 
+  - ローカルでの起動が必要
+  - ポート10101の使用
+  - 高品質音声のためのリソース消費
 
 ### ライセンス
 - **本アプリケーション**: MIT License
@@ -484,4 +766,5 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 
 ---
 
-*このドキュメントは Gemini Chatbot (Cloud Run Edition) v1.0.0 の技術仕様を記載しています。*
+*このドキュメントは Gemini Chatbot (Cloud Run Edition) v1.2.0 の技術仕様を記載しています。*
+*AivisSpeech Engine統合により、高品質な日本語音声合成機能を提供します。*

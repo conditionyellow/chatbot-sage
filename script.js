@@ -12,25 +12,69 @@ const voiceEngineToggle = document.getElementById('voice-engine-toggle');
 // 音声合成の設定
 let isSpeechEnabled = true;
 let currentSpeechSynthesis = null;
-let voiceEngine = 'webspeech'; // 'webspeech' または 'google-tts'
-let currentAudio = null; // Google TTS用のAudioオブジェクト
+let voiceEngine = 'webspeech'; // 'webspeech', 'google-tts', または 'aivis'
+let currentAudio = null; // Google TTS/AivisSpeech用のAudioオブジェクト
 
 // Text-to-Speech APIのエンドポイント（Cloud Functionsで実装予定）
 const TTS_API_URL = "https://gemini-chatbot-proxy-636074041441.asia-northeast1.run.app/tts";
+
+// AivisSpeech APIのエンドポイント（ローカル起動の場合）
+// ポートを変更したい場合はここを修正してください
+const AIVIS_API_URL = "http://127.0.0.1:10101";
+
+// AivisSpeech Engineの状態確認
+async function checkAivisSpeechEngine() {
+    try {
+        const response = await fetch(`${AIVIS_API_URL}/version`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(3000) // 3秒でタイムアウト
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('AivisSpeech Engine起動確認済み:', data);
+            return true;
+        }
+    } catch (error) {
+        console.warn('AivisSpeech Engine未起動:', error.message);
+        return false;
+    }
+    return false;
+}
 
 // Web Speech API の音声合成をチェック
 if ('speechSynthesis' in window) {
     console.log('Web Speech API is supported!');
 } else {
     console.warn('Web Speech API is not supported in this browser.');
-    voiceEngine = 'google-tts'; // Web Speech API非対応の場合はGoogle TTSに切り替え
+    voiceEngine = 'aivis'; // Web Speech API非対応の場合はAivisSpeechに切り替え
 }
 
 // 音声エンジン表示を更新
 function updateVoiceEngineDisplay() {
-    const engineText = voiceEngine === 'webspeech' ? 'Web' : 'GCP';
+    let engineText;
+    let titleText;
+    
+    switch(voiceEngine) {
+        case 'webspeech':
+            engineText = 'Web';
+            titleText = 'Web Speech API';
+            break;
+        case 'google-tts':
+            engineText = 'GCP';
+            titleText = 'Google Cloud TTS';
+            break;
+        case 'aivis':
+            engineText = 'Aivis';
+            titleText = 'AivisSpeech Engine';
+            break;
+        default:
+            engineText = 'Web';
+            titleText = 'Web Speech API';
+    }
+    
     voiceEngineToggle.textContent = `🎵${engineText}`;
-    voiceEngineToggle.title = `音声エンジン: ${voiceEngine === 'webspeech' ? 'Web Speech API' : 'Google Cloud TTS'}`;
+    voiceEngineToggle.title = `音声エンジン: ${titleText}`;
 }
 
 // Google Cloud Text-to-Speech APIを使用した音声合成
@@ -90,6 +134,148 @@ async function speakTextWithGoogleTTS(text) {
         // Google TTSが失敗した場合はWeb Speech APIにフォールバック
         if (voiceEngine === 'google-tts' && 'speechSynthesis' in window) {
             console.log('Google TTSエラーのため、Web Speech APIにフォールバック');
+            speakTextWithWebSpeech(text);
+        }
+    }
+}
+
+// AivisSpeech Engineを使用した音声合成
+async function speakTextWithAivisSpeech(text) {
+    try {
+        // AivisSpeech Engine APIで音声合成を実行（クエリパラメータ形式）
+        // スピーカーID: 888753760 = Anneli ノーマル
+        const speakerID = 888753760; // Anneliのノーマル音声
+        const audioQueryURL = `${AIVIS_API_URL}/audio_query?text=${encodeURIComponent(text)}&speaker=${speakerID}`;
+        
+        console.log('AivisSpeech audio_query URL:', audioQueryURL);
+        console.log('Request details:', {
+            method: 'POST',
+            headers: { 'accept': 'application/json' },
+            url: audioQueryURL
+        });
+        
+        const response = await fetch(audioQueryURL, {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json'
+            }
+        });
+        
+        console.log('Audio query response status:', response.status);
+        console.log('Audio query response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('AivisSpeech audio_query response:', errorText);
+            throw new Error(`AivisSpeech audio_query error: ${response.status}`);
+        }
+
+        const audioQuery = await response.json();
+        console.log('AivisSpeech audio_query 成功');
+
+        // 音声ファイルを生成（クエリパラメータ形式）
+        const synthesisURL = `${AIVIS_API_URL}/synthesis?speaker=${speakerID}`;
+        console.log('AivisSpeech synthesis URL:', synthesisURL);
+        console.log('Synthesis request body:', JSON.stringify(audioQuery, null, 2));
+        
+        const synthesisResponse = await fetch(synthesisURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'accept': 'audio/wav'
+            },
+            body: JSON.stringify(audioQuery)
+        });
+        
+        console.log('Synthesis response status:', synthesisResponse.status);
+        console.log('Synthesis response headers:', Object.fromEntries(synthesisResponse.headers.entries()));
+
+        if (!synthesisResponse.ok) {
+            const errorText = await synthesisResponse.text();
+            console.error('AivisSpeech synthesis response:', errorText);
+            throw new Error(`AivisSpeech synthesis error: ${synthesisResponse.status}`);
+        }
+
+        // WAV音声データを取得
+        const audioBlob = await synthesisResponse.blob();
+        console.log('AivisSpeech synthesis 成功、音声データサイズ:', audioBlob.size, 'bytes');
+        console.log('Audio blob type:', audioBlob.type);
+        
+        const audioUrl = URL.createObjectURL(audioBlob);
+        console.log('Audio URL created:', audioUrl);
+
+        // 現在の音声を停止
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+
+        currentAudio = new Audio(audioUrl);
+        currentAudio.volume = 0.8;
+        console.log('Audio element created, volume set to:', currentAudio.volume);
+
+        currentAudio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            currentAudio = null;
+            console.log('AivisSpeech 音声読み上げ終了');
+        };
+
+        currentAudio.onerror = (error) => {
+            console.error('AivisSpeech 音声再生エラー:', error);
+            console.error('Audio エラー詳細:', error.target.error);
+            currentAudio = null;
+        };
+
+        currentAudio.onloadeddata = () => {
+            console.log('AivisSpeech 音声データ読み込み完了');
+            console.log('Audio duration:', currentAudio.duration);
+            console.log('Audio readyState:', currentAudio.readyState);
+        };
+
+        currentAudio.oncanplay = () => {
+            console.log('AivisSpeech 音声再生準備完了');
+        };
+
+        try {
+            // ブラウザの自動再生ポリシーを考慮した再生試行
+            console.log('音声再生を試行中...');
+            await currentAudio.play();
+            console.log('AivisSpeech 音声読み上げ開始');
+        } catch (playError) {
+            console.error('音声再生に失敗:', playError);
+            console.error('PlayError name:', playError.name);
+            console.error('PlayError message:', playError.message);
+            
+            // ブラウザの自動再生ポリシーによるエラーの場合の対処
+            if (playError.name === 'NotAllowedError') {
+                console.warn('自動再生がブロックされました。ユーザーのクリックが必要です。');
+                // ユーザーに通知
+                alert('音声再生にはクリックが必要です。OKを押すと音声が再生されます。');
+                try {
+                    await currentAudio.play();
+                    console.log('ユーザーアクション後に音声再生開始');
+                } catch (secondError) {
+                    console.error('二回目の再生試行も失敗:', secondError);
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('AivisSpeech エラー:', error);
+        console.error('AivisSpeech Engine URL:', AIVIS_API_URL);
+        console.error('テキスト:', text);
+        
+        // より詳細なエラー情報を表示
+        if (error.message.includes('422')) {
+            console.error('422エラー: リクエストパラメータに問題があります');
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            console.error('ネットワークエラー: AivisSpeech Engineが起動していない可能性があります');
+            console.log('AivisSpeech Engineを起動してください: http://127.0.0.1:10101');
+        }
+        
+        // AivisSpeechが失敗した場合はWeb Speech APIにフォールバック
+        if (voiceEngine === 'aivis' && 'speechSynthesis' in window) {
+            console.log('AivisSpeechエラーのため、Web Speech APIにフォールバック');
             speakTextWithWebSpeech(text);
         }
     }
@@ -172,14 +358,23 @@ function speakText(text) {
         return;
     }
     
-    if (voiceEngine === 'google-tts') {
-        speakTextWithGoogleTTS(cleanText);
-    } else {
-        speakTextWithWebSpeech(cleanText);
+    console.log('🎵 音声エンジン:', voiceEngine, '| テキスト:', cleanText);
+    
+    switch (voiceEngine) {
+        case 'google-tts':
+            speakTextWithGoogleTTS(cleanText);
+            break;
+        case 'aivis':
+            speakTextWithAivisSpeech(cleanText);
+            break;
+        case 'webspeech':
+        default:
+            speakTextWithWebSpeech(cleanText);
+            break;
     }
 }
 
-// 音声停止関数（両エンジン対応）
+// 音声停止関数（全エンジン対応）
 function stopSpeech() {
     // Web Speech API の停止
     if ('speechSynthesis' in window) {
@@ -187,7 +382,7 @@ function stopSpeech() {
         currentSpeechSynthesis = null;
     }
     
-    // Google TTS の停止
+    // Google TTS / AivisSpeech の停止
     if (currentAudio) {
         currentAudio.pause();
         currentAudio = null;
@@ -313,17 +508,34 @@ stopSpeechButton.addEventListener('click', () => {
 });
 
 // 音声エンジン切り替えボタンのイベントリスナー
-voiceEngineToggle.addEventListener('click', () => {
+voiceEngineToggle.addEventListener('click', async () => {
     // 現在の音声を停止
     stopSpeech();
     
-    // エンジンを切り替え
-    voiceEngine = voiceEngine === 'webspeech' ? 'google-tts' : 'webspeech';
+    // エンジンを3つの中で順番に切り替え
+    switch (voiceEngine) {
+        case 'webspeech':
+            voiceEngine = 'google-tts';
+            break;
+        case 'google-tts':
+            voiceEngine = 'aivis';
+            // AivisSpeechに切り替える際に状態確認
+            const isAivisAvailable = await checkAivisSpeechEngine();
+            if (!isAivisAvailable) {
+                console.warn('AivisSpeech Engine未起動のため、Web Speech APIに戻します');
+                voiceEngine = 'webspeech';
+            }
+            break;
+        case 'aivis':
+        default:
+            voiceEngine = 'webspeech';
+            break;
+    }
     
-    // Web Speech API非対応の場合はGoogle TTSのみ
+    // Web Speech API非対応の場合は次のエンジンへ
     if (voiceEngine === 'webspeech' && !('speechSynthesis' in window)) {
         voiceEngine = 'google-tts';
-        console.warn('Web Speech API非対応のため、Google TTSを継続使用');
+        console.warn('Web Speech API非対応のため、Google TTSに切り替え');
     }
     
     updateVoiceEngineDisplay();
@@ -332,6 +544,15 @@ voiceEngineToggle.addEventListener('click', () => {
 
 // 初期表示を設定
 updateVoiceEngineDisplay();
+
+// 初期化時にAivisSpeech Engineの状態を確認
+checkAivisSpeechEngine().then(isAvailable => {
+    if (isAvailable) {
+        console.log('✅ AivisSpeech Engine利用可能');
+    } else {
+        console.log('❌ AivisSpeech Engine未起動 - 手動で起動してください');
+    }
+});
 
 // 音声リストが読み込まれた後に日本語音声をセットアップ
 speechSynthesis.addEventListener('voiceschanged', () => {
