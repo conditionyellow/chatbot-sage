@@ -512,6 +512,24 @@ async function sendMessageToCloudFunction(message) {
 
         appendMessage('bot', botResponseText);
         
+        // 🧠 感情分析とLive2D制御（音声読み上げ前に実行）
+        if (window.EmotionAnalyzer) {
+            console.log('🔍 チャットボット応答の感情分析開始:', botResponseText.substring(0, 100));
+            console.log('🔍 完全な応答テキスト:', botResponseText);
+            
+            // 🔬 直接分析も実行して比較
+            console.log('--- 直接分析結果 ---');
+            const directResult = window.EmotionAnalyzer.directAnalyze(botResponseText);
+            
+            console.log('--- Live2D適用結果 ---');
+            const emotionResult = await window.EmotionAnalyzer.applyEmotionToLive2D(botResponseText);
+            console.log('🎭 感情分析結果:', emotionResult);
+            
+            // 🔍 キーワード検索も実行
+            console.log('--- キーワード検索結果 ---');
+            window.EmotionAnalyzer.searchKeywords(botResponseText);
+        }
+        
         // ボットの応答を音声で読み上げ
         speakText(botResponseText);
 

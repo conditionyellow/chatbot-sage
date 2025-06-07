@@ -24,6 +24,29 @@
                 <button id="expression-angry" title="怒り">😠</button>
                 <button id="expression-normal" title="通常">😐</button>
             </div>
+            
+            <!-- 感情分析デバッグパネル -->
+            <div class="emotion-debug-panel" id="emotion-debug" style="display:none;">
+                <h4>🧠 感情分析デバッグ</h4>
+                <div class="emotion-test-buttons">
+                    <button onclick="window.EmotionAnalyzer.testEmotion('happy')" class="emotion-btn">😊 幸せ</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('surprised')" class="emotion-btn">😮 驚き</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('sad')" class="emotion-btn">😢 悲しみ</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('angry')" class="emotion-btn">😠 怒り</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('excited')" class="emotion-btn">⚡ 興奮</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('thinking')" class="emotion-btn">🤔 思考</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('neutral')" class="emotion-btn">😐 中立</button>
+                </div>
+                <div class="emotion-stats">
+                    <button onclick="console.log(window.EmotionAnalyzer.getEmotionStats())" class="stats-btn">📊 統計表示</button>
+                    <button onclick="window.EmotionTestSuite.runEmotionTests()" class="stats-btn">🧪 一括テスト</button>
+                    <button onclick="window.EmotionTestSuite.testSpecificEmotions()" class="stats-btn">🎯 特定感情テスト</button>
+                    <button onclick="document.getElementById('emotion-debug').style.display='none'" class="close-btn">❌ 閉じる</button>
+                </div>
+            </div>
+            
+            <!-- デバッグボタン -->
+            <button id="toggle-debug" class="debug-toggle" onclick="document.getElementById('emotion-debug').style.display=document.getElementById('emotion-debug').style.display==='none'?'block':'none'">🔧</button>
         </div>
         
         <!-- チャットボットエリア -->
@@ -46,6 +69,12 @@
 
     <!-- Live2D PIXI Integration Script -->
     <script src="live2d-pixi.js"></script>
+    <!-- Emotion Analysis Engine v2.0 -->
+    <script src="emotion-analyzer-v2.js"></script>
+    <!-- Emotion Analysis Test Suite -->
+    <script src="test-emotion-responses.js"></script>
+    <!-- Emotion Analysis Debugger -->
+    <script src="emotion-debugger.js"></script>
     <!-- Main Chatbot Script -->
     <script src="script.js"></script>
 </body>

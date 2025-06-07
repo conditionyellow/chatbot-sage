@@ -156,6 +156,7 @@ async function loadLive2DModel() {
         
         // モデル設定
         currentModel = model;
+        window.currentModel = model;  // グローバルアクセス用
         
         // ステージに追加
         app.stage.addChild(model);
@@ -230,34 +231,47 @@ async function setExpression(expressionName) {
     console.log(`🎭 表情変更: ${currentExpression} → ${expressionName}`);
     
     try {
-        // Normal 表情の場合は表情をリセット
-        if (expressionName === 'Normal') {
-            await currentModel.expression(null);
-        } else {
-            // Live2D表情名マッピング
-            const expressionMap = {
-                'Smile': 'Smile',
-                'Surprised': 'Surprised', 
-                'Sad': 'Sad',
-                'Angry': 'Angry'
-            };
-            
-            const live2dExpression = expressionMap[expressionName];
-            if (live2dExpression) {
-                const result = await currentModel.expression(live2dExpression);
-                if (result) {
-                    console.log(`✅ 表情変更成功: ${live2dExpression}`);
-                } else {
-                    console.warn(`⚠️ 表情が見つかりません: ${live2dExpression}`);
-                }
+        let result = false;
+        
+        // Live2D表情名マッピング（Normalも含む）
+        const expressionMap = {
+            'Normal': 'Normal',
+            'Smile': 'Smile',
+            'Surprised': 'Surprised', 
+            'Sad': 'Sad',
+            'Angry': 'Angry',
+            'Blushing': 'Blushing'
+        };
+        
+        const live2dExpression = expressionMap[expressionName];
+        if (live2dExpression) {
+            if (expressionName === 'Normal') {
+                // Normal表情の場合：まず他の表情をリセットしてからNormal表情を適用
+                await currentModel.expression(null);
+                await new Promise(resolve => setTimeout(resolve, 100)); // 短い遅延
+                result = await currentModel.expression('Normal');
+                console.log(`🔄 Normal表情に変更: ${result ? '成功' : '失敗'}`);
+            } else {
+                // 他の表情の場合
+                result = await currentModel.expression(live2dExpression);
+                console.log(`✅ 表情変更${result ? '成功' : '失敗'}: ${live2dExpression}`);
             }
+            
+            if (!result) {
+                console.warn(`⚠️ 表情が見つからないまたは変更失敗: ${live2dExpression}`);
+            }
+        } else {
+            console.warn(`⚠️ 未対応の表情名: ${expressionName}`);
         }
         
         currentExpression = expressionName;
         updateExpressionButtons();
         
+        return result;
+        
     } catch (error) {
         console.error('❌ 表情変更エラー:', error);
+        return false;
     }
 }
 
@@ -453,6 +467,65 @@ function showErrorFallback(errorMessage) {
 }
 
 /**
+ * Live2Dモーション再生
+ */
+async function playMotion(motionName) {
+    if (!currentModel) {
+        console.warn('モデルが読み込まれていません');
+        return false;
+    }
+    
+    console.log(`🎭 モーション再生開始: ${motionName}`);
+    
+    try {
+        const result = await currentModel.motion(motionName);
+        if (result) {
+            console.log(`✅ モーション再生成功: ${motionName}`);
+            return true;
+        } else {
+            console.warn(`⚠️ モーション再生失敗: ${motionName}`);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ モーション再生エラー:', error);
+        return false;
+    }
+}
+
+/**
+ * 感情ベースモーション制御
+ */
+async function playEmotionMotion(emotion, motionGroup = null) {
+    // Live2Dモデルの実際のモーション定義に基づく分類
+    const emotionMotions = {
+        'happy': ['Idle'], // アイドルモーション（嬉しい時）
+        'surprised': ['Tap'], // タップモーション（驚いた時）
+        'sad': ['FlickDown@Body'], // 下向きフリック（悲しい時）
+        'angry': ['Flick@Body'], // ボディフリック（怒った時）
+        'neutral': ['Idle'], // 基本アイドルモーション
+        'excited': ['FlickUp@Head'], // 頭上フリック（興奮時）
+        'thinking': ['Tap@Head'] // 頭タップ（考えている時）
+    };
+    
+    const selectedMotionGroup = motionGroup || emotionMotions[emotion] || emotionMotions['neutral'];
+    const motionGroupName = Array.isArray(selectedMotionGroup) ? selectedMotionGroup[0] : selectedMotionGroup;
+    
+    try {
+        const result = await currentModel.motion(motionGroupName);
+        if (result) {
+            console.log(`✅ 感情モーション再生成功: ${emotion} → ${motionGroupName}`);
+            return true;
+        } else {
+            console.warn(`⚠️ 感情モーション再生失敗: ${emotion} → ${motionGroupName}`);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ 感情モーション再生エラー:', error);
+        return false;
+    }
+}
+
+/**
  * クリーンアップ
  */
 function cleanup() {
@@ -475,6 +548,8 @@ function cleanup() {
 // グローバル公開
 window.Live2DController = {
     setExpression,
+    playMotion,
+    playEmotionMotion,
     startLipSync,
     stopLipSync,
     onSpeechStart,
@@ -482,6 +557,13 @@ window.Live2DController = {
     isAvailable: () => isInitialized,
     cleanup
 };
+
+// Live2Dモデルをグローバルアクセス可能にする
+window.currentModel = null;
+Object.defineProperty(window, 'currentModel', {
+    get: () => currentModel,
+    set: (value) => { currentModel = value; }
+});
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
