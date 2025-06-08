@@ -13,6 +13,11 @@ let isInitialized = false;
 let currentExpression = 'Normal';
 let isLipSyncActive = false;
 let lipSyncTimer = null;
+let audioContext = null;
+let analyser = null;
+let dataArray = null;
+let sourceNode = null;
+let lipSyncAnimationFrame = null;
 
 // モデル設定
 const modelConfig = {
@@ -233,6 +238,12 @@ async function setExpression(expressionName) {
     try {
         let result = false;
         
+        // 🔍 デバッグ: 現在のモデル状態を確認
+        if (currentModel.internalModel && currentModel.internalModel.settings) {
+            const availableExpressions = currentModel.internalModel.settings.expressions || [];
+            console.log('🔍 利用可能な表情:', availableExpressions.map(exp => exp.Name || exp.name));
+        }
+        
         // Live2D表情名マッピング（Normalも含む）
         const expressionMap = {
             'Normal': 'Normal',
@@ -244,21 +255,41 @@ async function setExpression(expressionName) {
         };
         
         const live2dExpression = expressionMap[expressionName];
+        console.log(`🔍 表情マッピング: ${expressionName} → ${live2dExpression}`);
+        
         if (live2dExpression) {
             if (expressionName === 'Normal') {
                 // Normal表情の場合：まず他の表情をリセットしてからNormal表情を適用
+                console.log('🔄 Normal表情への変更: 先にリセット実行');
                 await currentModel.expression(null);
                 await new Promise(resolve => setTimeout(resolve, 100)); // 短い遅延
                 result = await currentModel.expression('Normal');
                 console.log(`🔄 Normal表情に変更: ${result ? '成功' : '失敗'}`);
             } else {
                 // 他の表情の場合
+                console.log(`🎭 ${live2dExpression}表情への変更を実行`);
                 result = await currentModel.expression(live2dExpression);
                 console.log(`✅ 表情変更${result ? '成功' : '失敗'}: ${live2dExpression}`);
+                
+                // 🔍 デバッグ: 実際に設定された表情を確認
+                if (currentModel.internalModel && currentModel.internalModel.motionManager) {
+                    console.log('🔍 現在のモーション状態:', currentModel.internalModel.motionManager);
+                }
             }
             
             if (!result) {
                 console.warn(`⚠️ 表情が見つからないまたは変更失敗: ${live2dExpression}`);
+                
+                // 🔍 追加デバッグ: 表情ファイルの存在確認
+                if (currentModel.internalModel && currentModel.internalModel.settings) {
+                    const expressions = currentModel.internalModel.settings.expressions || [];
+                    const foundExpression = expressions.find(exp => (exp.Name || exp.name) === live2dExpression);
+                    if (foundExpression) {
+                        console.log('🔍 表情ファイルは存在:', foundExpression);
+                    } else {
+                        console.error('❌ 表情ファイルが見つかりません:', live2dExpression);
+                    }
+                }
             }
         } else {
             console.warn(`⚠️ 未対応の表情名: ${expressionName}`);
@@ -333,39 +364,162 @@ function updateExpressionButtons() {
 }
 
 /**
- * リップシンク開始
+ * Live2Dの口パラメータを制御（リップシンク用）
  */
-function startLipSync() {
-    if (isLipSyncActive || !currentModel) return;
+function setMouthParameter(openness) {
+    if (!currentModel || !currentModel.internalModel) {
+        return;
+    }
     
-    isLipSyncActive = true;
-    console.log('🎤 Live2D リップシンク開始');
-    
-    // Live2D パラメータでのリップシンク
-    lipSyncTimer = setInterval(() => {
-        if (currentModel && currentModel.internalModel) {
+    try {
+        const model = currentModel.internalModel;
+        
+        // 一般的なリップシンクパラメータ名で試行
+        const lipParamNames = [
+            'ParamMouthOpenY',
+            'PARAM_MOUTH_OPEN_Y', 
+            'MouthOpenY',
+            'mouth_open_y'
+        ];
+        
+        let parameterSet = false;
+        for (const paramName of lipParamNames) {
             try {
-                // 口の開閉パラメータ
-                const lipValue = Math.sin(Date.now() * 0.01) * 0.8 + 0.2;
-                
-                // Live2D Core でパラメータ設定
-                const coreModel = currentModel.internalModel.coreModel;
-                if (coreModel) {
-                    // パラメータIDを検索
-                    const paramIds = coreModel.getParameterIds();
-                    for (let i = 0; i < paramIds.length; i++) {
-                        const paramId = paramIds[i];
-                        if (paramId.includes('MouthOpenY') || paramId.includes('ParamMouthOpenY')) {
-                            coreModel.setParameterValueById(paramId, lipValue);
-                            break;
-                        }
-                    }
+                // パラメータが存在するかチェックして設定
+                if (model.getParameterIndex && model.getParameterIndex(paramName) >= 0) {
+                    model.setParameterValueById(paramName, openness);
+                    parameterSet = true;
+                    break;
+                } else if (model.setParameterValueById) {
+                    // 直接設定を試行（エラーが出ても続行）
+                    model.setParameterValueById(paramName, openness);
+                    parameterSet = true;
+                    break;
                 }
-            } catch (error) {
-                console.warn('リップシンクパラメータ設定エラー:', error);
+            } catch (paramError) {
+                // このパラメータ名では失敗、次を試行
+                continue;
             }
         }
-    }, 50);
+        
+        if (!parameterSet) {
+            // フォールバック: デフォルトパラメータインデックスで設定
+            if (model.setParameterValueByIndex) {
+                model.setParameterValueByIndex(0, openness); // 通常最初のパラメータは口
+            }
+        }
+    } catch (error) {
+        // エラーログを制限
+        if (!window.mouthParamErrorLogged) {
+            console.warn('🚨 口パラメータ設定エラー:', error.message);
+            window.mouthParamErrorLogged = true;
+        }
+    }
+}
+
+/**
+ * 基本的なリップシンク開始（後方互換性のため）
+ */
+function startLipSync() {
+    if (!isInitialized || !currentModel) {
+        console.warn('🚨 Live2Dモデルが初期化されていません');
+        return;
+    }
+    
+    console.log('🎤 Live2D 基本リップシンク開始');
+    startTimerBasedLipSync();
+}
+
+/**
+ * Web Audio APIを使用した高度なリップシンク
+ */
+function startAudioAnalysisLipSync(audioElement) {
+    if (!isInitialized || !currentModel) {
+        console.warn('🚨 Live2Dモデルが初期化されていません');
+        return;
+    }
+    
+    if (!audioElement) {
+        console.warn('🚨 音声要素が提供されていません、タイマーベースに切り替えます');
+        startTimerBasedLipSync();
+        return;
+    }
+    
+    console.log('🎤 Live2D Web Audio APIリップシンク開始');
+    
+    try {
+        // Web Audio APIコンテキストを作成
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        // アナライザーを作成
+        if (!analyser) {
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+        }
+        
+        // 音声ソースを作成してアナライザーに接続
+        sourceNode = audioContext.createMediaElementSource(audioElement);
+        sourceNode.connect(analyser);
+        analyser.connect(audioContext.destination);
+        
+        isLipSyncActive = true;
+        
+        // リアルタイム解析ループ
+        function analyzeLipSync() {
+            if (!isLipSyncActive) return;
+            
+            analyser.getByteFrequencyData(dataArray);
+            
+            // 低周波数帯域（人間の声）の音量を計算
+            let sum = 0;
+            const voiceRange = Math.floor(dataArray.length * 0.3); // 低周波数帯域
+            for (let i = 0; i < voiceRange; i++) {
+                sum += dataArray[i];
+            }
+            
+            const averageVolume = sum / voiceRange;
+            const normalizedVolume = Math.min(averageVolume / 128, 1.0);
+            
+            // 口の開き具合を設定（0.0-1.0）
+            const mouthOpenness = Math.pow(normalizedVolume, 0.5) * 0.8;
+            setMouthParameter(mouthOpenness);
+            
+            lipSyncAnimationFrame = requestAnimationFrame(analyzeLipSync);
+        }
+        
+        analyzeLipSync();
+        
+    } catch (error) {
+        console.error('❌ Web Audio APIリップシンクエラー:', error);
+        // フォールバックとしてタイマーベースを使用
+        startTimerBasedLipSync();
+    }
+}
+
+/**
+ * タイマーベースのシンプルなリップシンク
+ */
+function startTimerBasedLipSync() {
+    if (!isInitialized || !currentModel) {
+        console.warn('🚨 Live2Dモデルが初期化されていません');
+        return;
+    }
+    
+    console.log('🎤 Live2D タイマーベースリップシンク開始');
+    
+    isLipSyncActive = true;
+    
+    lipSyncTimer = setInterval(() => {
+        if (!isLipSyncActive) return;
+        
+        // ランダムな口の動き（0.0-0.8の範囲）
+        const randomOpenness = Math.random() * 0.8;
+        setMouthParameter(randomOpenness);
+        
+    }, 100); // 100msごとに更新
 }
 
 /**
@@ -377,29 +531,34 @@ function stopLipSync() {
     isLipSyncActive = false;
     console.log('🎤 Live2D リップシンク停止');
     
+    // エラー状態をリセット
+    window.lipSyncErrorLogged = false;
+    window.mouthParamErrorLogged = false;
+    
+    // タイマーベースリップシンクを停止
     if (lipSyncTimer) {
         clearInterval(lipSyncTimer);
         lipSyncTimer = null;
     }
     
-    // 口を閉じた状態に戻す
-    if (currentModel && currentModel.internalModel) {
-        try {
-            const coreModel = currentModel.internalModel.coreModel;
-            if (coreModel) {
-                const paramIds = coreModel.getParameterIds();
-                for (let i = 0; i < paramIds.length; i++) {
-                    const paramId = paramIds[i];
-                    if (paramId.includes('MouthOpenY') || paramId.includes('ParamMouthOpenY')) {
-                        coreModel.setParameterValueById(paramId, 0);
-                        break;
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn('リップシンク停止エラー:', error);
-        }
+    // Web Audio API ベースリップシンクを停止
+    if (lipSyncAnimationFrame) {
+        cancelAnimationFrame(lipSyncAnimationFrame);
+        lipSyncAnimationFrame = null;
     }
+    
+    // 音声解析ノードをクリーンアップ
+    if (sourceNode) {
+        try {
+            sourceNode.disconnect();
+        } catch (e) {
+            // 既に切断されている場合は無視
+        }
+        sourceNode = null;
+    }
+    
+    // 口を閉じた状態に戻す
+    setMouthParameter(0);
 }
 
 /**
@@ -426,10 +585,9 @@ function onSpeechEnd() {
     // リップシンク停止
     stopLipSync();
     
-    // 通常表情に戻す（遅延）
-    setTimeout(() => {
-        setExpression('Normal');
-    }, 1500);
+    // 感情表現中は通常表情への復帰を抑制
+    // 感情制御システムが管理するため、自動復帰は無効化
+    console.log('🎭 感情表現維持のため、表情自動復帰をスキップ');
 }
 
 /**
@@ -526,13 +684,78 @@ async function playEmotionMotion(emotion, motionGroup = null) {
 }
 
 /**
+ * 🔧 現在の表情状態を取得（デバッグ用）
+ */
+function getCurrentExpressionState() {
+    if (!currentModel || !currentModel.internalModel) {
+        return { error: 'モデルが読み込まれていません' };
+    }
+    
+    try {
+        const settings = currentModel.internalModel.settings;
+        const expressionManager = currentModel.internalModel.expressionManager;
+        
+        return {
+            currentExpression: currentExpression,
+            availableExpressions: settings?.expressions?.map(exp => exp.Name || exp.name) || [],
+            expressionManagerState: expressionManager ? {
+                isFinished: expressionManager.isFinished(),
+                currentExpression: expressionManager._currentExpressionIndex
+            } : null,
+            modelLoaded: !!currentModel,
+            internalModelLoaded: !!currentModel.internalModel
+        };
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+/**
+ * 🔧 表情を強制的にクリアしてリセット（デバッグ用）
+ */
+async function forceResetExpression() {
+    if (!currentModel) {
+        console.warn('モデルが読み込まれていません');
+        return false;
+    }
+    
+    try {
+        console.log('🔄 表情強制リセット開始');
+        
+        // 表情をクリア
+        await currentModel.expression(null);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Normalに設定
+        const result = await currentModel.expression('Normal');
+        
+        currentExpression = 'Normal';
+        updateExpressionButtons();
+        
+        console.log('🔄 表情強制リセット完了:', result);
+        return result;
+    } catch (error) {
+        console.error('❌ 表情強制リセットエラー:', error);
+        return false;
+    }
+}
+
+/**
  * クリーンアップ
  */
 function cleanup() {
-    if (lipSyncTimer) {
-        clearInterval(lipSyncTimer);
-        lipSyncTimer = null;
+    // リップシンクを停止
+    stopLipSync();
+    
+    // Web Audio APIリソースをクリーンアップ
+    if (audioContext) {
+        audioContext.close();
+        audioContext = null;
     }
+    
+    analyser = null;
+    dataArray = null;
+    sourceNode = null;
     
     if (currentModel) {
         currentModel.destroy();
@@ -552,9 +775,14 @@ window.Live2DController = {
     playEmotionMotion,
     startLipSync,
     stopLipSync,
+    startAudioAnalysisLipSync,
+    startTimerBasedLipSync,
+    setMouthParameter,
     onSpeechStart,
     onSpeechEnd,
     isAvailable: () => isInitialized,
+    getCurrentExpressionState,
+    forceResetExpression,
     cleanup
 };
 

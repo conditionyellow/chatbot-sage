@@ -6,9 +6,9 @@
 
 ### バージョン情報
 - **アプリケーション名**: Gemini Chatbot with Live2D (Natori Edition)
-- **バージョン**: 2.1.0
+- **バージョン**: 2.2.0
 - **作成日**: 2025年6月2日
-- **最終更新**: 2025年6月7日
+- **最終更新**: 2025年6月7日（感情表現制御システム改善）
 
 ---
 
@@ -43,7 +43,7 @@
 
 ```
 chatbot_sage/
-├── emotion-analyzer.js         # 感情分析エンジン（NEW）
+├── emotion-analyzer-v2.js     # 感情分析エンジン（v2 - 音声終了連動対応）
 ├── index.html              # メインHTMLファイル
 ├── style.css               # アプリケーションスタイル
 ├── script.js               # メインアプリケーションロジック
@@ -139,10 +139,10 @@ chatbot_sage/
 #### 2.3 音声連携アニメーション
 - **リップシンク**: 音声再生時の口の開閉アニメーション
 - **話し始め表情**: 音声開始時に笑顔表情に変更
-- **表情復帰**: 音声終了1.5秒後に通常表情に復帰
+- **表情復帰**: 音声終了まで感情表現を維持（従来の1.5秒固定から変更）
 - **パラメータ制御**: Live2D Coreによる口の開閉パラメータ操作
 
-#### 2.4 感情ベースモーション制御（NEW）
+#### 2.4 感情ベースモーション制御（UPDATED）
 - **感情分析**: ボット応答テキストの自動感情判定
 - **リアルタイム制御**: 感情に応じた表情とモーションの自動変更
 - **対応感情**: 
@@ -153,8 +153,10 @@ chatbot_sage/
   - 🤔 思考 (thinking) → Normal表情 + Tap@Headモーション
   - ⚡ 興奮 (excited) → Smile表情 + FlickUp@Headモーション
   - 😐 中立 (neutral) → Normal表情 + Idleモーション
+- **中立優先**: neutral感情の検出感度を向上（intensity: 0.7）
+- **happy感情の制限**: 強い感情表現のみに限定（一般的な「良い」「nice」は除外）
+- **音声終了連動**: 感情表現を音声終了まで維持し、音声終了イベントで復帰
 - **信頼度制御**: 感情判定の信頼度が0.3未満では変更なし
-- **持続時間**: 高信頼度（0.7以上）の感情は3秒後に通常表情に復帰
 - **キーワードベース**: 日本語感情キーワード辞書による高速分析
 
 #### 2.5 技術実装詳細
@@ -213,7 +215,10 @@ chatbot_sage/
     - サンプリングレート: 44.1kHz
     - エンコーディング: WAV
     - 音量: 80%
-- **自動フォールバック**: 選択したエンジンでエラーが発生した場合、自動的にWeb Speech APIにフォールバック
+- **デフォルト音声エンジン**: AivisSpeech Engine（起動時に自動選択）
+- **自動フォールバック**: 
+  - 起動時: AivisSpeech Engine未起動の場合、自動でWeb Speech APIに設定
+  - 実行時: 選択したエンジンでエラーが発生した場合、自動的にWeb Speech APIにフォールバック
 - **自動再生ポリシー対応**: ブラウザの自動再生制限に対応、ユーザーアクション後の再生試行
 
 #### 2.2 スタイル
@@ -382,7 +387,7 @@ const AIVIS_API_URL = "http://127.0.0.1:10101";
 
 let chatMessages = [];              // チャット履歴配列
 let isSpeechEnabled = true;         // 音声合成有効フラグ
-let voiceEngine = 'webspeech';      // 音声エンジン: 'webspeech' | 'google-tts' | 'aivis'
+let voiceEngine = 'aivis';          // 音声エンジン: 'webspeech' | 'google-tts' | 'aivis' (デフォルト: Aivis Speech)
 let currentSpeechSynthesis = null;  // 現在のWeb Speech APIオブジェクト
 let currentAudio = null;            // 現在のAudioオブジェクト（GCP TTS/AivisSpeech用）
 ```
@@ -507,6 +512,16 @@ AivisSpeech Engineの起動状況確認
 1. voiceEngine変数の値を確認
 2. 対応するアイコンテキストと説明を設定
 3. ボタンの表示テキストとツールチップを更新
+
+### initializeVoiceEngine()
+起動時の音声エンジン自動選択と初期化
+
+**動作**
+1. デフォルトのAivisSpeech Engineの起動状況を確認
+2. 利用可能な場合: voiceEngineを'aivis'に設定
+3. 利用不可の場合: Web Speech API対応チェック後'webspeech'に自動フォールバック
+4. Web Speech API非対応の場合: 'google-tts'に設定
+5. 最終設定を表示に反映
 
 ### stopSpeech()
 全音声エンジンの再生停止
@@ -1010,6 +1025,14 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 ---
 
 ## 更新履歴
+
+### Version 2.1.2 (2025-06-08)
+- **デフォルト音声エンジン変更**: AivisSpeech Engineを標準設定に変更
+  - 起動時デフォルト: WebSpeech → AivisSpeech Engine
+  - 自動初期化機能: `initializeVoiceEngine()` 関数追加
+  - 起動時フォールバック: Aivis未起動時は自動でWebSpeech APIに切り替え
+- **音声エンジン初期化の自動化**: ユーザー操作不要でベスト音声エンジンを選択
+- **エラーハンドリング強化**: 起動時の音声エンジン可用性チェック機能
 
 ### Version 2.1.1 (2025-06-07)
 - **AivisSpeech Engine スピーカー修正**: 利用可能なスピーカーに変更

@@ -1,4 +1,5 @@
 /**
+ /**
  * 感情分析とLive2Dモーション制御 v2.0
  * チャットボットの返答内容から感情を判定し、Live2Dのモーションと表情をリアルタイムで変更
  * Natoriモデル専用最適化版
@@ -6,19 +7,108 @@
 
 console.log('🧠 感情分析エンジンv2.0読み込み開始');
 
+// 🔧 感情状態管理用グローバル変数（音声終了まで感情をキープ）
+let currentEmotionState = {
+    expression: 'Normal',
+    isPlaying: false,
+    restoreTimer: null,
+    speechEndCallback: null,
+    speechStartTime: null,  // 🆕 音声開始時刻を記録
+    lastSetEmotion: 'Normal', // 🆕 最後に設定した感情を記録
+    speechEngine: null      // 🆕 現在使用中の音声エンジンを記録
+};
+
+// 🔧 音声終了時の感情復帰処理
+function scheduleEmotionRestore() {
+    // 既存のタイマーをクリア
+    if (currentEmotionState.restoreTimer) {
+        clearTimeout(currentEmotionState.restoreTimer);
+        currentEmotionState.restoreTimer = null;
+    }
+    
+    // 音声終了時の復帰コールバックを設定
+    currentEmotionState.speechEndCallback = () => {
+        setTimeout(async () => {
+            try {
+                if (window.Live2DController) {
+                    await window.Live2DController.setExpression('Normal');
+                    console.log('🔄 音声終了後に表情をNormalに復元');
+                    currentEmotionState.expression = 'Normal';
+                    currentEmotionState.isPlaying = false;
+                }
+            } catch (error) {
+                console.error('❌ 音声終了後の表情復元エラー:', error);
+            }
+        }, 500); // 音声終了後0.5秒で復帰
+    };
+    
+    console.log('🎭 感情復帰コールバック設定完了');
+}
+
+// 🔧 グローバル関数として公開（script.jsから呼び出し可能）
+window.scheduleEmotionRestore = () => {
+    console.log('🔄 感情復帰処理 - 呼び出し確認');
+    
+    if (currentEmotionState.speechEndCallback && typeof currentEmotionState.speechEndCallback === 'function') {
+        console.log('🔄 音声終了による感情復帰処理実行');
+        currentEmotionState.speechEndCallback();
+    } else {
+        console.warn('⚠️ 感情復帰コールバックが設定されていません');
+        
+        // フォールバック処理：直接Normalに戻す
+        setTimeout(async () => {
+            try {
+                if (window.Live2DController && currentEmotionState.isPlaying) {
+                    console.log('🔄 フォールバック感情復帰実行');
+                    const result = await window.Live2DController.setExpression('Normal');
+                    console.log('🔄 フォールバック：表情をNormalに復元 -', result ? '成功' : '失敗');
+                    currentEmotionState.expression = 'Normal';
+                    currentEmotionState.isPlaying = false;
+                } else {
+                    console.log('🔄 感情復帰スキップ: Live2DController利用不可 または 感情再生中ではない');
+                }
+            } catch (error) {
+                console.error('❌ フォールバック感情復元エラー:', error);
+            }
+        }, 500);
+    }
+    
+    // 🔧 状態確認のための追加ログ
+    console.log('🔍 現在の感情状態:', {
+        expression: currentEmotionState.expression,
+        isPlaying: currentEmotionState.isPlaying,
+        lastSetEmotion: currentEmotionState.lastSetEmotion,
+        speechEngine: currentEmotionState.speechEngine,
+        speechStartTime: currentEmotionState.speechStartTime,
+        hasCallback: !!currentEmotionState.speechEndCallback,
+        live2dAvailable: !!window.Live2DController
+    });
+};
+
+// 🆕 音声再生開始通知関数
+window.notifySpeechStart = (engine = 'unknown') => {
+    console.log(`🎤 音声再生開始通知 - エンジン: ${engine}`);
+    currentEmotionState.speechStartTime = Date.now();
+    currentEmotionState.speechEngine = engine;
+    currentEmotionState.isPlaying = true;
+    
+    console.log('🔍 音声開始時の感情状態:', {
+        expression: currentEmotionState.expression,
+        lastSetEmotion: currentEmotionState.lastSetEmotion,
+        speechEngine: engine,
+        speechStartTime: new Date(currentEmotionState.speechStartTime).toLocaleTimeString()
+    });
+};
+
 // 感情キーワード辞書（Natori用最適化）
 const emotionKeywords = {
     happy: {
         keywords: ['嬉しい', 'うれしい', '楽しい', 'たのしい', '喜ぶ', 'よろこぶ', '素晴らしい', 'すばらしい', 
                   'ワクワク', 'わくわく', '最高', 'さいこう', 'やった', 'おめでとう', '祝福', 'しゅくふく',
-                  '笑顔', 'えがお', '笑', 'わら', '幸せ', 'しあわせ', '満足', 'まんぞく', '感激', 'かんげき',
-                  'グッド', 'ナイス', 'いいね', '良い', 'よい', '愛', 'あい', 'ハッピー', 'ラッキー',
-                  // 🔧 英語・カタカナ表現を追加
-                  'good', 'great', 'awesome', 'wonderful', 'nice', 'excellent', 'perfect', 'amazing',
-                  'happy', 'joy', 'glad', 'pleased', 'excited', 'fantastic', 'brilliant', 'super',
-                  // 🔧 よくある日本語表現を追加
-                  'いい感じ', 'バッチリ', 'ぴったり', '気分良い', 'きぶんいい', '調子良い', 'ちょうしいい',
-                  '順調', 'じゅんちょう', '成功', 'せいこう', '達成', 'たっせい', 'やり遂げ', 'やりとげ'],
+                  '笑顔', 'えがお', '幸せ', 'しあわせ', '感激', 'かんげき', 'ハッピー', 'ラッキー',
+                  // 🔧 強い感情表現のみに限定（一般的すぎる単語を除去）
+                  'awesome', 'wonderful', 'excellent', 'perfect', 'amazing', 'fantastic', 'brilliant',
+                  'バッチリ', 'やり遂げ', 'やりとげ'],
         expressions: ['Smile', 'Blushing'],
         motions: ['Tap', 'FlickUp@Head'],
         priority: { expression: 'Smile', motion: 'Tap' },
@@ -52,10 +142,23 @@ const emotionKeywords = {
         intensity: 0.7
     },
     angry: {
-        keywords: ['怒り', 'いかり', '腹立つ', 'はらだつ', 'ムカつく', 'むかつく', 'イライラ', 'いらいら',
-                  '許せない', 'ゆるせない', '最悪', 'さいあく', '嫌', 'いや', 'ダメ', 'だめ', '駄目',
-                  '問題', 'もんだい', '困る', 'こまる', 'うざい', 'ウザイ', 'バカ', 'ばか', 'アホ',
-                  '頭にくる', 'あたまにくる', 'ふざけるな', 'やめろ', 'やめて', '迷惑', 'めいわく'],
+        keywords: ['怒り', 'いかり', '怒る', 'おこる', '怒って', 'おこって', '怒った', 'おこった',
+                  '腹立つ', 'はらだつ', '腹が立つ', 'はらがたつ', '腹が立ちます', 'はらがたちます',
+                  'ムカつく', 'むかつく', 'ムカついた', 'むかついた', 'ムカムカ', 'むかむか',
+                  'イライラ', 'いらいら', 'イライラする', 'いらいらする',
+                  '許せない', 'ゆるせない', '許さない', 'ゆるさない',
+                  '腹立たしい', 'はらだたしい', '最悪', 'さいあく', '嫌', 'いや', 'ダメ', 'だめ', '駄目',
+                  '困る', 'こまる', 'うざい', 'ウザイ', 'バカ', 'ばか', 'アホ', 'あほ',
+                  '頭にくる', 'あたまにくる', '頭に来る', 'あたまにくる', '頭にきた', 'あたまにきた',
+                  'ふざけるな', 'ふざけんな', 'やめろ', 'やめて', '迷惑', 'めいわく',
+                  '癪に障る', 'しゃくにさわる', '気に入らない', 'きにいらない',
+                  '腹黒い', 'はらぐろい', '憤り', 'いきどおり', '憤慨', 'ふんがい',
+                  // 🔧 追加のangryキーワード強化
+                  '当然', 'とうぜん', '当然です', 'とうぜんです', '理不尽', 'りふじん', 
+                  '理不尽な', 'りふじんな', '頭にくる', '頭にきた', '納得いかない', 'なっとくいかない',
+                  '納得できない', 'なっとくできない', '不快', 'ふかい', '不愉快', 'ふゆかい',
+                  '腹に据えかねる', 'はらにすえかねる', '我慢ならない', 'がまんならない', 
+                  'むしゃくしゃ', 'ムシャクシャ'],
         expressions: ['Angry'],
         motions: ['Flick@Body', 'Tap'],
         priority: { expression: 'Angry', motion: 'Flick@Body' },
@@ -63,16 +166,23 @@ const emotionKeywords = {
     },
     neutral: {
         keywords: ['こんにちは', 'おはよう', 'こんばんは', 'はじめまして', 'よろしく', 'ありがとう',
-                  'どうぞ', 'なるほど', 'そうですね', 'わかりました', 'はい', 'いいえ', '普通', 'ふつう'],
+                  'どうぞ', 'なるほど', 'そうですね', 'わかりました', 'はい', 'いいえ', '普通', 'ふつう',
+                  // 🔧 一般的な肯定的表現をneutralに分類（happyから移動）
+                  'グッド', 'good', 'ナイス', 'nice', 'いいね', '良い', 'よい', 'great', 'いい感じ',
+                  'ぴったり', '気分良い', 'きぶんいい', '調子良い', 'ちょうしいい', '順調', 'じゅんちょう',
+                  '成功', 'せいこう', '達成', 'たっせい', '満足', 'まんぞく', 'happy', 'joy', 'glad', 
+                  'pleased', 'super', '笑', 'わら', '愛', 'あい'],
         expressions: ['Normal'],
         motions: ['Idle'],
         priority: { expression: 'Normal', motion: 'Idle' },
-        intensity: 0.5
+        intensity: 0.7  // 🔧 neutralの重みを上げて優先度向上
     },
     excited: {
-        keywords: ['興奮', 'こうふん', 'テンション', 'てんしょん', '盛り上がる', 'もりあがる', 'エキサイト',
+        keywords: ['興奮', 'こうふん', 'テンション', 'てんしょん', '盛り上がる', 'もりあがる', 'エキサイト', 'エキサイティング',
                   'やる気', 'やるき', '元気', 'げんき', 'パワー', 'ぱわー', '活力', 'かつりょく',
-                  'アドレナリン', 'あどれなりん', '勢い', 'いきおい', '熱い', 'あつい', '燃える', 'もえる'],
+                  'アドレナリン', 'あどれなりん', '勢い', 'いきおい', '熱い', 'あつい', '燃える', 'もえる',
+                  // 🔧 excited専用キーワードを追加
+                  'エクサイト', 'ワクワク感', 'ドキドキ', 'ハイテンション', 'ノリノリ', 'フィーバー'],
         expressions: ['Smile', 'Surprised', 'Blushing'],
         motions: ['Tap', 'FlickUp@Head', 'Tap@Head'],
         priority: { expression: 'Smile', motion: 'Tap' },
@@ -101,6 +211,23 @@ const availableLive2DAssets = {
     expressions: ['Angry', 'Blushing', 'Normal', 'Sad', 'Smile', 'Surprised', 'exp_01', 'exp_02', 'exp_03', 'exp_04', 'exp_05'],
     motionGroups: ['Idle', 'Tap', 'FlickUp@Head', 'Flick@Body', 'FlickDown@Body', 'Tap@Head']
 };
+
+// 🆕 ネガティブ感情キーワードの存在をチェックするヘルパー関数
+function hasNegativeEmotion(text) {
+    const negativeEmotions = ['angry', 'sad'];
+    const lowerText = text.toLowerCase();
+    
+    for (const emotion of negativeEmotions) {
+        const keywords = emotionKeywords[emotion]?.keywords || [];
+        for (const keyword of keywords) {
+            if (lowerText.includes(keyword.toLowerCase())) {
+                console.log(`🔍 ネガティブキーワード「${keyword}」を検出 (${emotion})`);
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 // 感情分析メイン関数（改良版）
 function analyzeEmotion(text) {
@@ -178,17 +305,18 @@ function analyzeEmotion(text) {
 
     // 🔧 キーワードマッチがない場合の文脈推測（新機能）
     if (maxScore === 0 && text.length > 10) {
-        // 疑問符や感嘆符による感情推測
+        // 疑問符や感嘆符による感情推測（ただし、他の感情キーワードが存在しない場合のみ）
         if (text.includes('?') || text.includes('？')) {
             dominantEmotion = 'thinking';
             selectedData = emotionKeywords.thinking;
             maxScore = 0.3; // 低い信頼度で設定
             console.log('🤔 疑問符検出により思考感情を推測');
-        } else if (text.includes('!') || text.includes('！')) {
+        } else if ((text.includes('!') || text.includes('！')) && !hasNegativeEmotion(text)) {
+            // 感嘆符があっても、ネガティブな感情キーワードがある場合は excited にしない
             dominantEmotion = 'excited';
             selectedData = emotionKeywords.excited;
             maxScore = 0.4;
-            console.log('🎉 感嘆符検出により興奮感情を推測');
+            console.log('🎉 感嘆符検出により興奮感情を推測（ネガティブ要素なし）');
         } else if (text.length > 50) {
             // 長いテキストは思考感情として推測
             dominantEmotion = 'thinking';
@@ -294,17 +422,15 @@ async function applyEmotionToLive2D(text, options = {}) {
             }
         }
 
-        // 高信頼度の感情処理
-        const restoreDelay = options.restoreDelay || (analysis.confidence > 0.7 ? 3000 : 2000);
-        if (analysis.confidence > 0.7 && expressionResult) {
-            setTimeout(async () => {
-                try {
-                    await window.Live2DController.setExpression('Normal');
-                    console.log('🔄 表情を通常に復元');
-                } catch (error) {
-                    console.error('❌ 表情復元エラー:', error);
-                }
-            }, restoreDelay);
+        // 🔧 音声終了連動の感情復帰システム（時間ベース復帰を無効化）
+        if (expressionResult && analysis.emotion !== 'neutral') {
+            // 感情状態を記録
+            currentEmotionState.expression = analysis.priority.expression;
+            currentEmotionState.isPlaying = true;
+            
+            // 音声終了時の復帰処理をスケジュール
+            scheduleEmotionRestore();
+            console.log('🎭 感情表現開始 - 音声終了まで維持');
         }
 
         return {
@@ -470,111 +596,371 @@ function checkLive2DStatus() {
     console.groupEnd();
 }
 
-// グローバル公開（拡張版）
-window.EmotionAnalyzer = {
-    // コア機能
-    analyzeEmotion,
-    applyEmotionToLive2D,
-    playMotionByGroup,
+// 🔧 デバッグ用: angry感情のテスト関数（詳細版）
+window.testAngryEmotion = async function(testText = "それは許せません！とても腹が立ちます！") {
+    console.log('🔴 Angry感情テスト開始:', testText);
     
-    // プロンプト拡張
-    createEmotionAwarePrompt,
+    // 感情分析をテスト
+    const analysis = analyzeEmotion(testText);
+    console.log('🔍 分析結果:', analysis);
     
-    // 管理・統計
-    addEmotionKeywords,
-    getEmotionStats,
+    if (analysis.emotion === 'angry') {
+        console.log('✅ Angry感情の検出成功');
+        console.log('🎭 表情設定:', analysis.priority.expression);
+        console.log('🎬 モーション設定:', analysis.priority.motion);
+        
+        // Live2D表情変更をテスト
+        if (window.Live2DController) {
+            try {
+                console.log('🎭 Live2D表情変更実行中...');
+                const result = await window.Live2DController.setExpression(analysis.priority.expression);
+                console.log('🎭 表情変更結果:', result, '(', analysis.priority.expression, ')');
+                
+                // 実際に設定された表情を確認
+                if (window.currentModel && window.currentModel.internalModel) {
+                    const settings = window.currentModel.internalModel.settings;
+                    if (settings && settings.expressions) {
+                        console.log('🔍 利用可能な表情:', settings.expressions.map(exp => exp.Name || exp.name));
+                        
+                        // 現在の表情状態をチェック
+                        setTimeout(() => {
+                            console.log('🔍 現在の表情状態:', window.Live2DController ? 'Live2DController利用可能' : 'Live2DController利用不可');
+                            if (window.currentModel && window.currentModel.internalModel) {
+                                console.log('🔍 モデル状態:', {
+                                    modelLoaded: !!window.currentModel,
+                                    internalModel: !!window.currentModel.internalModel,
+                                    expressionManager: !!window.currentModel.internalModel.expressionManager
+                                });
+                            }
+                        }, 1000);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ 表情変更エラー:', error);
+            }
+        } else {
+            console.warn('⚠️ Live2DController が存在しません');
+        }
+    } else {
+        console.warn('⚠️ Angry感情が検出されませんでした。実際の感情:', analysis.emotion);
+        console.log('🔍 全感情スコア:', analysis.allResults);
+    }
     
-    // デバッグ・テスト
-    testEmotion,
-    logEmotionAnalysis,
-    checkLive2DStatus,  // 新しい関数を追加
-    
-    // データアクセス
-    emotionKeywords,
-    availableLive2DAssets,
-    
-    // バージョン情報
-    version: '2.1.0',
-    description: 'Natori専用最適化感情分析エンジン（デバッグ強化版）'
+    return analysis;
 };
 
-console.log('✅ 感情分析エンジンv2.0読み込み完了');
-console.log('📊 感情統計:', getEmotionStats());
-console.log('🎭 Live2D利用可能アセット:', availableLive2DAssets);
-
-// グローバルスコープに感情分析機能を公開（デバッグ用）
-window.EmotionAnalyzer = {
-    analyzeEmotion,
-    applyEmotionToLive2D,
-    logEmotionAnalysis,
-    checkLive2DStatus,
-    addEmotionKeywords,
-    getEmotionStats,
-    emotionKeywords,
+// 🔧 デバッグ用: 直接表情変更テスト
+window.testDirectExpression = async function(expressionName = 'Angry') {
+    console.log('🎭 直接表情変更テスト:', expressionName);
     
-    // 🔧 新追加: 簡単なテスト関数
-    testEmotion: function(text) {
-        console.log('🧪 感情分析テスト開始:', text);
-        const result = logEmotionAnalysis(text);
-        return result;
-    },
-    
-    // 🔧 新追加: 直接感情分析（Live2D適用なし）
-    directAnalyze: function(text) {
-        console.log('\n🔬 === 直接感情分析テスト ===');
-        console.log('入力テキスト:', text);
-        const result = analyzeEmotion(text);
-        console.log('分析結果:', result);
-        return result;
-    },
-    
-    // 🔧 新追加: キーワード検索テスト
-    searchKeywords: function(text, emotion = null) {
-        console.log('\n🔍 === キーワード検索テスト ===');
-        const targetEmotions = emotion ? [emotion] : Object.keys(emotionKeywords);
-        
-        targetEmotions.forEach(emo => {
-            console.log(`\n--- ${emo.toUpperCase()}感情のキーワード検索 ---`);
-            const keywords = emotionKeywords[emo].keywords;
-            const found = [];
-            
-            keywords.forEach(keyword => {
-                if (text.toLowerCase().includes(keyword.toLowerCase())) {
-                    found.push(keyword);
-                    console.log(`✅ マッチ: "${keyword}"`);
-                }
-            });
-            
-            if (found.length === 0) {
-                console.log(`❌ ${emo}: マッチするキーワードなし`);
-            } else {
-                console.log(`🎯 ${emo}: ${found.length}個のキーワードがマッチ:`, found);
-            }
-        });
-    },
-    
-    // 🔧 新追加: 複数テキストの一括テスト
-    batchTest: function(texts) {
-        console.log('🧪 一括感情分析テスト開始');
-        const results = [];
-        texts.forEach((text, index) => {
-            console.log(`\n--- テスト ${index + 1}: ${text.substring(0, 30)}... ---`);
-            const result = this.directAnalyze(text);
-            results.push({ text, result });
-        });
-        return results;
-    },
-    
-    // 🔧 新追加: 感情分布の可視化
-    analyzeEmotionDistribution: function(texts) {
-        const distribution = {};
-        texts.forEach(text => {
-            const result = analyzeEmotion(text);
-            distribution[result.emotion] = (distribution[result.emotion] || 0) + 1;
-        });
-        console.log('📊 感情分布:', distribution);
-        return distribution;
+    if (window.Live2DController) {
+        try {
+            const result = await window.Live2DController.setExpression(expressionName);
+            console.log('🎭 直接表情変更結果:', result, '(', expressionName, ')');
+            return result;
+        } catch (error) {
+            console.error('❌ 直接表情変更エラー:', error);
+            return false;
+        }
+    } else {
+        console.warn('⚠️ Live2DController が存在しません');
+        return false;
     }
 };
 
-console.log('✅ 感情分析エンジンv2.0読み込み完了 - window.EmotionAnalyzerで利用可能');
+// 🔧 デバッグ用: 感情→表情のフローテスト
+window.testEmotionFlow = async function(testText = "それは許せません！") {
+    console.log('🔄 感情→表情フローテスト開始:', testText);
+    
+    try {
+        // ステップ1: 感情分析
+        console.log('📊 ステップ1: 感情分析');
+        const analysis = analyzeEmotion(testText);
+        console.log('結果:', analysis);
+        
+        // ステップ2: Live2D制御
+        console.log('🎭 ステップ2: Live2D制御');
+        const live2dResult = await applyEmotionToLive2D(testText);
+        console.log('結果:', live2dResult);
+        
+        // ステップ3: 状態確認
+        console.log('🔍 ステップ3: 状態確認');
+        setTimeout(() => {
+            if (window.currentModel) {
+                console.log('現在のモデル状態: 読み込み済み');
+                if (window.currentModel.internalModel && window.currentModel.internalModel.settings) {
+                    console.log('利用可能な表情数:', window.currentModel.internalModel.settings.expressions.length);
+                }
+            } else {
+                console.log('現在のモデル状態: 未読み込み');
+            }
+        }, 500);
+        
+        return { analysis, live2dResult };
+    } catch (error) {
+        console.error('❌ フローテストエラー:', error);
+        return { error };
+    }
+};
+
+// 🔧 デバッグ用: 全感情テスト関数
+window.testAllEmotions = async function() {
+    const testTexts = {
+        happy: '素晴らしい！とても嬉しいです！',
+        sad: '悲しいです。とても残念な気持ちです',
+        angry: 'それは許せません！とても腹が立ちます！',
+        surprised: 'びっくりした！まさか！',
+        neutral: 'こんにちは。よろしくお願いします',
+        excited: 'やった！エキサイティングです！',
+        thinking: 'う～ん、考えてみますね。難しい問題ですね'
+    };
+    
+    for (const [emotion, text] of Object.entries(testTexts)) {
+        console.log(`\n🧪 ${emotion.toUpperCase()}感情テスト:`, text);
+        const analysis = analyzeEmotion(text);
+        console.log(`結果: ${analysis.emotion} (信頼度: ${analysis.confidence.toFixed(3)})`);
+        
+        if (analysis.emotion === emotion) {
+            console.log('✅ 正しく検出');
+        } else {
+            console.warn('⚠️ 予期と異なる結果');
+        }
+    }
+};
+
+// 🔧 デバッグ用: 現在の状態を全て確認する関数
+window.checkSystemState = function() {
+    console.log('🔍 システム状態確認開始');
+    
+    // 1. Live2DController の状態
+    console.log('1️⃣ Live2DController:', {
+        exists: !!window.Live2DController,
+        isAvailable: window.Live2DController ? window.Live2DController.isAvailable() : false,
+        methods: window.Live2DController ? Object.keys(window.Live2DController) : []
+    });
+    
+    // 2. currentModel の状態
+    console.log('2️⃣ currentModel:', {
+        exists: !!window.currentModel,
+        hasInternalModel: !!(window.currentModel && window.currentModel.internalModel),
+        expressionsAvailable: window.currentModel && window.currentModel.internalModel && window.currentModel.internalModel.settings ? 
+            window.currentModel.internalModel.settings.expressions.length : 0
+    });
+    
+    // 3. 感情分析システムの状態
+    console.log('3️⃣ 感情分析システム:', {
+        analyzeEmotionExists: !!window.analyzeEmotion,
+        applyEmotionToLive2DExists: !!window.applyEmotionToLive2D,
+        scheduleEmotionRestoreExists: !!window.scheduleEmotionRestore,
+        currentEmotionState: currentEmotionState
+    });
+    
+    // 4. Live2D表情状態（利用可能な場合）
+    if (window.Live2DController && window.Live2DController.getCurrentExpressionState) {
+        console.log('4️⃣ Live2D表情状態:', window.Live2DController.getCurrentExpressionState());
+    }
+    
+    return {
+        live2d: !!window.Live2DController,
+        model: !!window.currentModel,
+        emotion: !!window.analyzeEmotion,
+        restore: !!window.scheduleEmotionRestore
+    };
+};
+
+// 🔧 デバッグ用: angry問題のトラブルシューティング
+window.troubleshootAngry = async function() {
+    console.log('🔴 Angry表情問題のトラブルシューティング開始');
+    
+    const testText = "それは許せません！とても腹が立ちます！ムカつく！";
+    
+    try {
+        // ステップ1: システム状態確認
+        console.log('🔍 ステップ1: システム状態確認');
+        const systemState = window.checkSystemState();
+        
+        if (!systemState.live2d) {
+            console.error('❌ Live2DControllerが利用できません');
+            return;
+        }
+        
+        // ステップ2: 感情分析テスト
+        console.log('🔍 ステップ2: 感情分析テスト');
+        const analysis = window.analyzeEmotion(testText);
+        console.log('感情分析結果:', analysis);
+        
+        if (analysis.emotion !== 'angry') {
+            console.warn('⚠️ angry感情が検出されませんでした');
+            return;
+        }
+        
+        // ステップ3: 表情リセット
+        console.log('🔍 ステップ3: 表情リセット');
+        await window.Live2DController.forceResetExpression();
+        
+        // ステップ4: Angry表情テスト
+        console.log('🔍 ステップ4: Angry表情直接テスト');
+        const directResult = await window.Live2DController.setExpression('Angry');
+        console.log('直接Angry表情設定結果:', directResult);
+        
+        // ステップ5: 表情状態確認
+        console.log('🔍 ステップ5: 表情状態確認');
+        setTimeout(() => {
+            const state = window.Live2DController.getCurrentExpressionState();
+            console.log('現在の表情状態:', state);
+            
+            if (state.currentExpression !== 'Angry') {
+                console.warn('⚠️ Angry表情が正しく設定されていません:', state.currentExpression);
+            } else {
+                console.log('✅ Angry表情が正しく設定されました');
+            }
+        }, 1000);
+        
+        return { analysis, directResult };
+        
+    } catch (error) {
+        console.error('❌ トラブルシューティングエラー:', error);
+        return { error };
+    }
+};
+
+// 🌟 感情分析エンジンをグローバルオブジェクトとしてエクスポート
+window.EmotionAnalyzer = {
+    // 主要な感情分析関数
+    analyzeEmotion: analyzeEmotion,
+    applyEmotionToLive2D: applyEmotionToLive2D,
+    directAnalyze: analyzeEmotion,  // 直接分析用のエイリアス
+    
+    // 感情キーワード辞書
+    emotionKeywords: emotionKeywords,
+    
+    // 検索とデバッグ機能
+    searchKeywords: function(text, targetEmotion = null) {
+        console.log(`🔍 キーワード検索: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+        
+        for (const [emotion, data] of Object.entries(emotionKeywords)) {
+            if (targetEmotion && emotion !== targetEmotion) continue;
+            
+            const foundKeywords = data.keywords.filter(keyword => 
+                text.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            if (foundKeywords.length > 0) {
+                console.log(`  ✅ ${emotion}: [${foundKeywords.join(', ')}]`);
+            }
+        }
+    },
+    
+    // バッチテスト機能
+    batchTest: function(texts) {
+        console.log('🧪 バッチテスト開始:', texts.length, '件のテキスト');
+        const results = {};
+        
+        texts.forEach((text, index) => {
+            const analysis = analyzeEmotion(text);
+            const emotion = analysis.emotion;
+            
+            if (!results[emotion]) {
+                results[emotion] = [];
+            }
+            results[emotion].push({
+                index: index,
+                text: text.substring(0, 30) + (text.length > 30 ? '...' : ''),
+                confidence: analysis.confidence
+            });
+        });
+        
+        console.log('📊 バッチテスト結果:', results);
+        return results;
+    },
+    
+    // 感情分布分析
+    analyzeEmotionDistribution: function(texts) {
+        const distribution = {};
+        let totalConfidence = 0;
+        
+        texts.forEach(text => {
+            const analysis = analyzeEmotion(text);
+            const emotion = analysis.emotion;
+            
+            if (!distribution[emotion]) {
+                distribution[emotion] = { count: 0, totalConfidence: 0 };
+            }
+            
+            distribution[emotion].count++;
+            distribution[emotion].totalConfidence += analysis.confidence;
+            totalConfidence += analysis.confidence;
+        });
+        
+        // 平均信頼度を計算
+        for (const emotion in distribution) {
+            distribution[emotion].averageConfidence = 
+                distribution[emotion].totalConfidence / distribution[emotion].count;
+            distribution[emotion].percentage = 
+                (distribution[emotion].count / texts.length) * 100;
+        }
+        
+        console.log('📈 感情分布:', distribution);
+        return distribution;
+    },
+    
+    // ユーティリティ関数
+    getEmotionStats: getEmotionStats,
+    testEmotion: testEmotion,
+    addEmotionKeywords: addEmotionKeywords,
+    logEmotionAnalysis: logEmotionAnalysis,
+    checkLive2DStatus: checkLive2DStatus,
+    
+    // モーション再生
+    playMotionByGroup: playMotionByGroup,
+    
+    // 感情状態管理
+    getCurrentEmotionState: function() {
+        return { ...currentEmotionState };
+    },
+    
+    // 音声終了通知（speech engines用）
+    notifySpeechEnd: function() {
+        if (currentEmotionState.speechEndCallback) {
+            console.log('🎤 音声終了通知を受信');
+            currentEmotionState.speechEndCallback();
+            currentEmotionState.speechEndCallback = null;
+        }
+    },
+    
+    // デバッグ関数群
+    debug: {
+        testAngryEmotion: function() {
+            console.log('🔥 Angry感情のテスト開始');
+            return testEmotion('angry');
+        },
+        
+        testAllEmotions: function() {
+            const emotions = ['happy', 'angry', 'sad', 'surprised', 'excited', 'thinking', 'neutral'];
+            console.log('🎭 全感情テスト開始');
+            
+            emotions.forEach((emotion, index) => {
+                setTimeout(() => {
+                    console.log(`▶️ ${emotion} テスト実行`);
+                    testEmotion(emotion);
+                }, index * 2000);
+            });
+        },
+        
+        troubleshootAngry: function() {
+            return troubleshootAngry();
+        }
+    }
+};
+
+// 初期化完了ログ
+console.log('✅ 感情分析エンジンv2.0読み込み完了');
+console.log('🎯 利用可能な機能:', Object.keys(window.EmotionAnalyzer));
+console.log('🧠 感情キーワード辞書:', Object.keys(emotionKeywords));
+
+// 音声終了時の通知システムをグローバルに追加
+window.notifySpeechEnd = function() {
+    if (window.EmotionAnalyzer) {
+        window.EmotionAnalyzer.notifySpeechEnd();
+    }
+};

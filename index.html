@@ -41,6 +41,10 @@
                     <button onclick="console.log(window.EmotionAnalyzer.getEmotionStats())" class="stats-btn">📊 統計表示</button>
                     <button onclick="window.EmotionTestSuite.runEmotionTests()" class="stats-btn">🧪 一括テスト</button>
                     <button onclick="window.EmotionTestSuite.testSpecificEmotions()" class="stats-btn">🎯 特定感情テスト</button>
+                    <button onclick="window.runCompleteTest()" class="stats-btn">🚀 完全テスト</button>
+                    <button onclick="window.runQuickEmotionTest()" class="stats-btn">🧠 感情テスト</button>
+                    <button onclick="window.runQuickLive2DTest()" class="stats-btn">🎭 Live2Dテスト</button>
+                    <button onclick="window.testLipSync && window.testLipSync()" class="stats-btn">👄 リップシンクテスト</button>
                     <button onclick="document.getElementById('emotion-debug').style.display='none'" class="close-btn">❌ 閉じる</button>
                 </div>
             </div>
@@ -75,6 +79,16 @@
     <script src="test-emotion-responses.js"></script>
     <!-- Emotion Analysis Debugger -->
     <script src="emotion-debugger.js"></script>
+    <!-- Emotion Test Mock (for testing without API calls) -->
+    <script src="emotion-test-mock.js"></script>
+    <!-- Test Fixes -->
+    <script src="test-fixes.js"></script>
+    <!-- Chloe's Comprehensive Test Suite -->
+    <script src="chloe-test-suite.js"></script>
+    <!-- Chloe's Quick Test Messages -->
+    <script src="chloe-quick-test.js"></script>
+    <!-- Chloe's Lip Sync Test Suite -->
+    <script src="lip-sync-test.js"></script>
     <!-- Main Chatbot Script -->
     <script src="script.js"></script>
 </body>

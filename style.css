@@ -261,9 +261,10 @@ h1 {
 }
 
 .emotion-stats {
-    display: flex;
-    gap: 8px;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-top: 10px;
 }
 
 .stats-btn, .close-btn {
@@ -271,16 +272,25 @@ h1 {
     color: white;
     border: 1px solid #777;
     border-radius: 4px;
-    padding: 6px 12px;
-    font-size: 0.75rem;
+    padding: 6px 8px;
+    font-size: 0.7rem;
     cursor: pointer;
-    flex: 1;
     transition: all 0.3s ease;
+    text-align: center;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .stats-btn:hover {
     background-color: #2196F3;
     border-color: #2196F3;
+}
+
+.close-btn {
+    grid-column: 1 / -1;
+    background-color: #666;
 }
 
 .close-btn:hover {

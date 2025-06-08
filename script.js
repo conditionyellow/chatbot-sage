@@ -12,7 +12,7 @@ const voiceEngineToggle = document.getElementById('voice-engine-toggle');
 // 音声合成の設定
 let isSpeechEnabled = true;
 let currentSpeechSynthesis = null;
-let voiceEngine = 'webspeech'; // 'webspeech', 'google-tts', または 'aivis'
+let voiceEngine = 'aivis'; // 'webspeech', 'google-tts', または 'aivis' - デフォルトはAivis Speech
 let currentAudio = null; // Google TTS/AivisSpeech用のAudioオブジェクト
 
 // Text-to-Speech APIのエンドポイント（Cloud Functionsで実装予定）
@@ -124,12 +124,38 @@ async function speakTextWithGoogleTTS(text) {
             if (window.Live2DController) {
                 window.Live2DController.onSpeechEnd();
             }
+            
+            // 感情状態を復元（音声終了と連動）
+            if (window.scheduleEmotionRestore) {
+                window.scheduleEmotionRestore();
+                console.log('感情復元処理を実行しました（Google TTS終了時）');
+            }
         };
         
         currentAudio.onerror = (error) => {
             console.error('Google TTS 音声再生エラー:', error);
             currentAudio = null;
+            
+            // エラー時も感情状態を復元
+            if (window.scheduleEmotionRestore) {
+                window.scheduleEmotionRestore();
+                console.log('感情復元処理を実行しました（Google TTS エラー時）');
+            }
         };
+        
+        // Google TTSの音声再生開始を通知（感情状態追跡用）
+        if (window.notifySpeechStart) {
+            window.notifySpeechStart('google-tts');
+        }
+        
+        // Live2Dキャラクターの音声開始アニメーション & リップシンク
+        if (window.Live2DController) {
+            window.Live2DController.onSpeechStart();
+            // Web Audio API ベースリップシンクを開始
+            if (window.Live2DController.startAudioAnalysisLipSync) {
+                window.Live2DController.startAudioAnalysisLipSync(currentAudio);
+            }
+        }
         
         await currentAudio.play();
         console.log('Google TTS 音声読み上げ開始');
@@ -250,6 +276,12 @@ async function speakTextWithAivisSpeech(text) {
             if (window.Live2DController) {
                 window.Live2DController.onSpeechEnd();
             }
+            
+            // 感情状態を復元（音声終了と連動）
+            if (window.scheduleEmotionRestore) {
+                window.scheduleEmotionRestore();
+                console.log('感情復元処理を実行しました（AivisSpeech終了時）');
+            }
         };
 
         currentAudio.onerror = (error) => {
@@ -258,6 +290,12 @@ async function speakTextWithAivisSpeech(text) {
             console.error('Audio networkState:', currentAudio.networkState);
             console.error('Audio readyState:', currentAudio.readyState);
             currentAudio = null;
+            
+            // エラー時も感情状態を復元
+            if (window.scheduleEmotionRestore) {
+                window.scheduleEmotionRestore();
+                console.log('感情復元処理を実行しました（AivisSpeech エラー時）');
+            }
         };
 
         currentAudio.onloadeddata = () => {
@@ -278,6 +316,16 @@ async function speakTextWithAivisSpeech(text) {
             if (window.Live2DController) {
                 console.log('Live2D音声開始アニメーション実行');
                 window.Live2DController.onSpeechStart();
+                
+                // Web Audio API ベースリップシンクを開始
+                if (window.Live2DController.startAudioAnalysisLipSync) {
+                    window.Live2DController.startAudioAnalysisLipSync(currentAudio);
+                }
+            }
+            
+            // AivisSpeechの音声再生開始を通知（感情状態追跡用）
+            if (window.notifySpeechStart) {
+                window.notifySpeechStart('aivis');
             }
             
             await currentAudio.play();
@@ -359,6 +407,18 @@ function speakTextWithWebSpeech(text) {
     utterance.onstart = function() {
         console.log('Web Speech 音声読み上げ開始');
         currentSpeechSynthesis = utterance;
+        
+        // Live2Dキャラクターの音声開始アニメーション & リップシンク
+        if (window.Live2DController) {
+            window.Live2DController.onSpeechStart();
+            // Web Speech APIの場合は通常のリップシンクを使用
+            // （Web Audio APIは使用できないため）
+        }
+        
+        // Web Speech APIの音声再生開始を通知（感情状態追跡用）
+        if (window.notifySpeechStart) {
+            window.notifySpeechStart('webspeech');
+        }
     };
     
     utterance.onend = function() {
@@ -369,6 +429,12 @@ function speakTextWithWebSpeech(text) {
         if (window.Live2DController) {
             window.Live2DController.onSpeechEnd();
         }
+        
+        // 感情状態を復元（音声終了と連動）
+        if (window.scheduleEmotionRestore) {
+            window.scheduleEmotionRestore();
+            console.log('感情復元処理を実行しました（Web Speech終了時）');
+        }
     };
     
     utterance.onerror = function(event) {
@@ -378,6 +444,12 @@ function speakTextWithWebSpeech(text) {
         // エラー時もLive2Dアニメーションを停止
         if (window.Live2DController) {
             window.Live2DController.onSpeechEnd();
+        }
+        
+        // エラー時も感情状態を復元
+        if (window.scheduleEmotionRestore) {
+            window.scheduleEmotionRestore();
+            console.log('感情復元処理を実行しました（Web Speech エラー時）');
         }
     };
     
@@ -449,6 +521,12 @@ function stopSpeech() {
         window.Live2DController.onSpeechEnd();
     }
     
+    // 手動停止時も感情状態を復元
+    if (window.scheduleEmotionRestore) {
+        window.scheduleEmotionRestore();
+        console.log('感情復元処理を実行しました（手動停止時）');
+    }
+    
     console.log('音声読み上げを停止しました');
 }
 
@@ -513,21 +591,31 @@ async function sendMessageToCloudFunction(message) {
         appendMessage('bot', botResponseText);
         
         // 🧠 感情分析とLive2D制御（音声読み上げ前に実行）
+        console.log('🔧 EmotionAnalyzer存在チェック:', typeof window.EmotionAnalyzer);
         if (window.EmotionAnalyzer) {
+            console.log('✅ EmotionAnalyzerが利用可能です');
             console.log('🔍 チャットボット応答の感情分析開始:', botResponseText.substring(0, 100));
             console.log('🔍 完全な応答テキスト:', botResponseText);
             
-            // 🔬 直接分析も実行して比較
-            console.log('--- 直接分析結果 ---');
-            const directResult = window.EmotionAnalyzer.directAnalyze(botResponseText);
-            
-            console.log('--- Live2D適用結果 ---');
-            const emotionResult = await window.EmotionAnalyzer.applyEmotionToLive2D(botResponseText);
-            console.log('🎭 感情分析結果:', emotionResult);
-            
-            // 🔍 キーワード検索も実行
-            console.log('--- キーワード検索結果 ---');
-            window.EmotionAnalyzer.searchKeywords(botResponseText);
+            try {
+                // 🔬 直接分析も実行して比較
+                console.log('--- 直接分析結果 ---');
+                const directResult = window.EmotionAnalyzer.directAnalyze(botResponseText);
+                console.log('📊 直接分析結果:', directResult);
+                
+                console.log('--- Live2D適用結果 ---');
+                const emotionResult = await window.EmotionAnalyzer.applyEmotionToLive2D(botResponseText);
+                console.log('🎭 感情分析結果:', emotionResult);
+                
+                // 🔍 キーワード検索も実行
+                console.log('--- キーワード検索結果 ---');
+                window.EmotionAnalyzer.searchKeywords(botResponseText);
+            } catch (error) {
+                console.error('❌ 感情分析中にエラーが発生しました:', error);
+            }
+        } else {
+            console.error('❌ EmotionAnalyzerが読み込まれていません');
+            console.log('🔧 利用可能なwindowプロパティ:', Object.keys(window).filter(key => key.includes('Emotion')));
         }
         
         // ボットの応答を音声で読み上げ
@@ -624,10 +712,44 @@ voiceEngineToggle.addEventListener('click', async () => {
 // 初期表示を設定
 updateVoiceEngineDisplay();
 
-// 初期化時にAivisSpeech Engineの状態を確認
+// 起動時の音声エンジン初期化処理
+async function initializeVoiceEngine() {
+    console.log('🎵 音声エンジン初期化開始 - デフォルト: Aivis Speech');
+    
+    // デフォルトのAivis Speechが利用可能かチェック
+    const isAivisAvailable = await checkAivisSpeechEngine();
+    
+    if (isAivisAvailable) {
+        console.log('✅ AivisSpeech Engine利用可能 - デフォルトとして設定');
+        voiceEngine = 'aivis';
+    } else {
+        console.log('❌ AivisSpeech Engine未起動 - Web Speech APIに自動フォールバック');
+        
+        // Web Speech APIが利用可能かチェック
+        if ('speechSynthesis' in window) {
+            voiceEngine = 'webspeech';
+            console.log('✅ Web Speech APIにフォールバック成功');
+        } else {
+            // 最後の手段としてGoogle TTSに設定
+            voiceEngine = 'google-tts';
+            console.log('⚠️ Web Speech API非対応 - Google Cloud TTSに設定');
+        }
+    }
+    
+    // 最終的に設定されたエンジンを表示に反映
+    updateVoiceEngineDisplay();
+    console.log(`🎵 音声エンジン初期化完了: ${voiceEngine}`);
+}
+
+// DOM読み込み完了後に音声エンジンを初期化
+document.addEventListener('DOMContentLoaded', () => {
+    initializeVoiceEngine();
+});
+
+// 初期化時にAivisSpeech Engineの状態を確認（既存の処理は残す）
 checkAivisSpeechEngine().then(isAvailable => {
     if (isAvailable) {
-        console.log('✅ AivisSpeech Engine利用可能');
+        console.log('✅ AivisSpeech Engine利用可能（詳細確認）');
     } else {
         console.log('❌ AivisSpeech Engine未起動 - 手動で起動してください');
     }
