@@ -563,17 +563,56 @@ async function sendMessageToCloudFunction(message) {
     chatMessages.push({ role: 'user', text: message });
 
     try {
+        // 🎭 Natori性格システム: 特別な応答をチェック
+        let specialResponse = null;
+        if (window.NatoriPersonality) {
+            specialResponse = window.NatoriPersonality.getSpecialResponse(message);
+        }
+        
+        // 特別な応答がある場合はそれを使用し、API呼び出しをスキップ
+        if (specialResponse) {
+            console.log('✨ 特別な応答を使用:', specialResponse);
+            
+            // 「思考中...」メッセージを削除
+            chatHistoryDiv.removeChild(thinkingMessageDiv);
+            
+            appendMessage('bot', specialResponse);
+            
+            // 感情分析とLive2D制御
+            if (window.EmotionAnalyzer) {
+                try {
+                    const emotionResult = await window.EmotionAnalyzer.applyEmotionToLive2D(specialResponse);
+                    console.log('🎭 特別応答の感情分析結果:', emotionResult);
+                } catch (error) {
+                    console.error('❌ 特別応答の感情分析エラー:', error);
+                }
+            }
+            
+            // 音声読み上げ
+            speakText(specialResponse);
+            
+            // チャット履歴に追加
+            chatMessages.push({ role: 'model', text: specialResponse });
+            
+            return; // API呼び出しをスキップ
+        }
+        
+        let requestBody = {
+            userMessage: message,
+            chatHistory: chatMessages.slice(0, -1) // 最新のユーザーメッセージを除く履歴を送信
+        };
+        
+        // 🎭 システムプロンプトを追加（性格定義）
+        if (window.NatoriPersonality) {
+            requestBody.systemPrompt = window.NatoriPersonality.generateSystemPrompt();
+        }
+        
         const response = await fetch(CLOUD_FUNCTION_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                userMessage: message,
-                chatHistory: chatMessages.slice(0, -1) // 最新のユーザーメッセージを除く履歴を送信
-                                                        // Gemini APIはユーザーメッセージを 'sendMessage' で受け取るため、
-                                                        // 履歴には含まない（あるいは含めてもOK、モデルの挙動による）
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
@@ -583,7 +622,24 @@ async function sendMessageToCloudFunction(message) {
         }
 
         const data = await response.json();
-        const botResponseText = data.reply;
+        let botResponseText = data.reply;
+
+        // 🎭 Natori性格システム: 応答を性格に基づいて修飾
+        if (window.NatoriPersonality) {
+            const personalityResult = window.NatoriPersonality.analyzePersonalityResponse(message, botResponseText);
+            console.log('👸 性格分析結果:', personalityResult);
+            
+            // 修飾された応答を使用
+            botResponseText = personalityResult.modifiedResponse;
+            
+            // 検出された性格特徴をログ出力
+            if (personalityResult.detectedTraits.length > 0) {
+                console.log('🔍 検出された性格特徴:', personalityResult.detectedTraits);
+            }
+            if (personalityResult.emotionalContext !== 'neutral') {
+                console.log('😊 感情コンテキスト:', personalityResult.emotionalContext);
+            }
+        }
 
         // 最新の「思考中...」メッセージを削除
         chatHistoryDiv.removeChild(thinkingMessageDiv);
@@ -606,6 +662,18 @@ async function sendMessageToCloudFunction(message) {
                 console.log('--- Live2D適用結果 ---');
                 const emotionResult = await window.EmotionAnalyzer.applyEmotionToLive2D(botResponseText);
                 console.log('🎭 感情分析結果:', emotionResult);
+                
+                // 🎭 性格システムと感情分析結果の連携
+                if (window.NatoriPersonality && emotionResult.emotion) {
+                    console.log('🤝 性格システムと感情分析の連携開始');
+                    console.log(`📊 検出された感情: ${emotionResult.emotion}`);
+                    console.log(`🎯 信頼度: ${emotionResult.confidence}`);
+                    
+                    // 感情に基づいてより適切な性格応答を生成（将来の拡張用）
+                    if (emotionResult.confidence > 0.5) {
+                        console.log('✨ 高信頼度の感情が検出されました - 性格応答との連携が有効です');
+                    }
+                }
                 
                 // 🔍 キーワード検索も実行
                 console.log('--- キーワード検索結果 ---');

@@ -45,6 +45,13 @@
                     <button onclick="window.runQuickEmotionTest()" class="stats-btn">🧠 感情テスト</button>
                     <button onclick="window.runQuickLive2DTest()" class="stats-btn">🎭 Live2Dテスト</button>
                     <button onclick="window.testLipSync && window.testLipSync()" class="stats-btn">👄 リップシンクテスト</button>
+                </div>
+                <div class="personality-test-buttons">
+                    <button onclick="window.NatoriPersonality.debug.testAllTraits()" class="personality-btn">👸 性格特徴テスト</button>
+                    <button onclick="window.NatoriPersonality.debug.testSpecialResponses()" class="personality-btn">🌟 特別応答テスト</button>
+                    <button onclick="window.NatoriPersonality.debug.showSystemPrompt()" class="personality-btn">📜 システムプロンプト</button>
+                    <button onclick="window.NatoriPersonality.debug.testEmotionalModifier('happy')" class="personality-btn">😊 幸せ修飾</button>
+                    <button onclick="window.NatoriPersonality.debug.testEmotionalModifier('shy')" class="personality-btn">😳 恥ずかしがり</button>
                     <button onclick="document.getElementById('emotion-debug').style.display='none'" class="close-btn">❌ 閉じる</button>
                 </div>
             </div>
@@ -73,6 +80,8 @@
 
     <!-- Live2D PIXI Integration Script -->
     <script src="live2d-pixi.js"></script>
+    <!-- Natori Personality System -->
+    <script src="natori-personality.js"></script>
     <!-- Emotion Analysis Engine v2.0 -->
     <script src="emotion-analyzer-v2.js"></script>
     <!-- Emotion Analysis Test Suite -->

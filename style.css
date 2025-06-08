@@ -298,6 +298,42 @@ h1 {
     border-color: #f44336;
 }
 
+/* 🎭 性格テストボタンのスタイル */
+.personality-test-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+    border-top: 1px solid #666;
+    padding-top: 10px;
+}
+
+.personality-btn {
+    background-color: #9C27B0;
+    color: white;
+    border: 1px solid #BA68C8;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.personality-btn:hover {
+    background-color: #E91E63;
+    border-color: #F06292;
+    transform: scale(1.02);
+}
+
+.personality-btn:active {
+    transform: scale(0.98);
+}
+
 /* デバッグトグルボタン */
 .debug-toggle {
     position: absolute;
