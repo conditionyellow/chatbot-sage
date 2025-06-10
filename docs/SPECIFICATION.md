@@ -6,9 +6,10 @@
 
 ### バージョン情報
 - **アプリケーション名**: Gemini Chatbot with Live2D (Natori Edition)
-- **バージョン**: 2.2.0
+- **バージョン**: 2.3.0
 - **作成日**: 2025年6月2日
-- **最終更新**: 2025年6月7日（感情表現制御システム改善）
+- **最終更新**: 2025年6月10日（YouTubeライブチャット連携機能追加）
+- **動作確認済み**: 2025年6月10日（YouTubeライブチャット機能の実動作テスト成功）
 
 ---
 
@@ -17,16 +18,19 @@
 ### アーキテクチャ概要
 ```
 [フロントエンド] ←→ [Cloud Run Proxy] ←→ [Google Gemini API]
-       ↓
-[Live2D Character (Natori)]
-       ↓
-[Voice Synthesis Engine]
+       ↓                                    ↑
+[Live2D Character (Natori)]                 │
+       ↓                                    │
+[Voice Synthesis Engine]                    │
+       ↑                                    │
+[YouTube Live Chat API] ────────────────────┘
 ```
 
 ### 技術スタック
 - **フロントエンド**: HTML5, CSS3, Vanilla JavaScript
 - **バックエンド**: Google Cloud Run (Proxy Server)
 - **AI API**: Google Gemini API
+- **外部API連携**: YouTube Data API v3 (Live Chat)
 - **Live2D**: 
   - PIXI.js v7.2.4 (WebGL Renderer)
   - pixi-live2d-display (Cubism 4 Support)
@@ -48,6 +52,7 @@ chatbot_sage/
 ├── style.css               # アプリケーションスタイル
 ├── script.js               # メインアプリケーションロジック
 ├── live2d-pixi.js          # Live2D PIXI統合コントローラー（本番実装）
+├── youtube-chat-integration.js # YouTubeライブチャット統合モジュール（NEW）
 ├── models/                 # Live2Dモデル格納フォルダ
 │   └── natori/             # Natoriキャラクターモデル
 │       ├── natori_pro_exp_t03.can3         # 表情アニメーション
@@ -114,6 +119,15 @@ chatbot_sage/
 - **エラーハンドリング**: 
   - 接続エラー時の適切なエラーメッセージ
   - 送信ボタンの無効化/有効化
+
+#### 1.4 YouTubeライブチャット連携（NEW）
+- **自動監視**: YouTube Data API v3を使用したライブチャット取得
+- **リアルタイム応答**: 取得したコメントに対する自動応答
+- **重複防止**: 処理済みメッセージの管理とタイムアウト処理
+- **視覚的区別**: YouTubeメッセージ専用スタイル（🎥アイコン、赤背景）
+- **設定管理**: API Key、配信ID、チェック間隔の保存・復元
+- **エラーハンドリング**: API制限、認証エラー、接続失敗の適切な処理
+- **フォールバック**: OpenAI選択失敗時のランダム選択
 
 ### 2. Live2Dキャラクター機能
 
@@ -221,6 +235,25 @@ chatbot_sage/
   - 実行時: 選択したエンジンでエラーが発生した場合、自動的にWeb Speech APIにフォールバック
 - **自動再生ポリシー対応**: ブラウザの自動再生制限に対応、ユーザーアクション後の再生試行
 
+#### 3.3 YouTubeライブチャット設定パネル（NEW）
+- **折りたたみ式UI**: 設定ヘッダークリックで展開/折りたたみ
+- **YouTube API Key入力**: パスワード形式での安全な入力
+- **配信ID入力**: 動画IDまたはYouTube URL（自動解析対応）
+- **チェック間隔設定**: 5-60秒の範囲でスライダー調整
+- **接続制御ボタン**: 
+  - 🔗 チャット監視開始ボタン
+  - ⏹️ 監視停止ボタン
+- **状態表示**: リアルタイム接続状況
+  - 未接続（グレー）
+  - 接続中...（黄色、アニメーション）
+  - 監視中（緑色、パルスアニメーション）
+  - エラー（赤色）
+- **設定保存**: LocalStorageによる設定値の永続化
+- **YouTubeメッセージスタイル**: 
+  - 🎥アイコン付き
+  - 赤グラデーション背景
+  - YouTube専用タグ表示
+
 #### 2.2 スタイル
 - **背景色**: #1E0E07（ダークブラウン）
 - **コンテナ**: 白背景、角丸、シャドウ
@@ -296,6 +329,56 @@ https://gemini-chatbot-proxy-636074041441.asia-northeast1.run.app/tts
   "languageCode": "ja-JP",
   "voiceName": "ja-JP-Neural2-B",
   "audioEncoding": "MP3"
+}
+```
+
+### YouTube Data API v3（NEW）
+
+#### 動画情報取得エンドポイント
+```
+https://www.googleapis.com/youtube/v3/videos
+```
+
+**パラメータ**
+- `part`: liveStreamingDetails
+- `id`: 動画ID
+- `key`: YouTube Data API v3 キー
+
+**レスポンス例**
+```json
+{
+  "items": [
+    {
+      "liveStreamingDetails": {
+        "activeLiveChatId": "Live_Chat_ID_Here"
+      }
+    }
+  ]
+}
+```
+
+#### ライブチャット取得エンドポイント
+```
+https://www.googleapis.com/youtube/v3/liveChat/messages
+```
+
+**パラメータ**
+- `part`: snippet
+- `liveChatId`: ライブチャットID
+- `key`: YouTube Data API v3 キー
+
+**レスポンス例**
+```json
+{
+  "items": [
+    {
+      "id": "message_id",
+      "snippet": {
+        "displayMessage": "チャットメッセージ内容",
+        "authorDisplayName": "ユーザー名"
+      }
+    }
+  ]
 }
 ```
 
@@ -466,6 +549,82 @@ Web Speech APIを使用した音声合成
 
 ### speakTextWithGoogleTTS(text)
 Google Cloud Text-to-Speech APIを使用した音声合成
+
+### YouTubeLiveChatIntegration Class（NEW）
+YouTubeライブチャット統合を管理するクラス
+
+#### constructor()
+**初期化処理**
+- 各種設定変数の初期化
+- DOM要素の取得
+- イベントリスナーの設定
+- 保存済み設定の読み込み
+
+#### startMonitoring()
+ライブチャット監視を開始
+
+**動作フロー**
+1. 入力値の検証（API Key、動画ID）
+2. 動画IDの正規化（URL解析）
+3. ライブチャットIDの取得
+4. 監視ループの開始
+5. UI状態の更新
+
+#### stopMonitoring()
+ライブチャット監視を停止
+
+**動作**
+1. 監視フラグをfalseに設定
+2. タイムアウトをクリア
+3. UI状態をリセット
+
+#### fetchLiveChatMessages()
+YouTube APIからライブチャットメッセージを取得
+
+**戻り値**: Promise&lt;Array&gt; - チャットメッセージ配列
+
+**動作**
+1. ライブチャットAPI呼び出し
+2. エラーハンドリング
+3. メッセージ配列の返却
+
+#### pickBestChatMessage(messages)
+取得したメッセージから最適なものを選択
+
+**パラメータ**
+- `messages`: Array - 取得したメッセージ配列
+
+**戻り値**: Promise&lt;string|null&gt; - 選択されたメッセージ
+
+**動作フロー**
+1. 期限切れメッセージのクリーンアップ
+2. 未処理メッセージのフィルタリング
+3. OpenAI APIでの最適選択（フォールバック: ランダム選択）
+4. 選択結果の返却
+
+#### addMessageToChat(message, className)
+YouTubeメッセージをチャット履歴に追加
+
+**パラメータ**
+- `message`: string - 表示するメッセージ
+- `className`: string - CSSクラス名
+
+**動作**
+1. メッセージ要素の作成
+2. YouTube専用スタイルの適用
+3. チャット履歴への追加
+4. 自動スクロール
+
+### sendMessageToChatbot(message, addToHistory)（NEW）
+YouTube統合用のチャットボット連携関数
+
+**パラメータ**
+- `message`: string - 送信するメッセージ
+- `addToHistory`: boolean - 履歴に追加するかどうか
+
+**動作**
+1. sendMessageToCloudFunction()の呼び出し
+2. 重複防止制御
 
 **パラメータ**
 - `text`: string - 読み上げるテキスト
@@ -800,6 +959,9 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 6. **Google Cloud TTS**: API利用料金発生、ネットワーク必須
 7. **音声エンジン設定**: UIでの詳細設定変更不可（コード内固定）
 8. **Live2D高度機能**: マウストラッキング、自動まばたき、アイドルモーション未実装
+9. **YouTube Data API**: 利用制限あり（1日10,000リクエスト）
+10. **YouTubeライブ配信**: アクティブなライブ配信のみ対応
+11. **チャット選択**: 簡易ランダム選択（高度なAI選択は要OpenAI API）
 
 ### 既知の問題
 1. **長時間使用**: メモリリーク可能性（履歴蓄積）
@@ -809,6 +971,9 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 5. **音声品質**: ブラウザ・エンジンによる音声の違い
 6. **AivisSpeech依存**: ローカルエンジンの起動状態に依存
 7. **自動再生制限**: ブラウザポリシーによる初回再生制限
+8. **YouTube API制限**: レート制限によるアクセス制限（403エラー）
+9. **ライブチャット遅延**: YouTube側の配信遅延（通常10-30秒）
+10. **重複メッセージ**: 同一メッセージの再処理防止機能の限界
 
 ---
 
@@ -824,6 +989,7 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 - [x] Live2Dキャラクター表示（完了）
 - [x] Live2D表情制御（完了）
 - [x] Live2D音声連携アニメーション（完了）
+- [x] YouTubeライブチャット連携（完了）
 - [ ] Live2D高度機能（マウストラッキング、自動まばたき、アイドルモーション）
 - [ ] 音声入力対応（音声認識）
 - [ ] 音声設定カスタマイズUI（速度、音程、音量、スピーカー選択）
@@ -832,6 +998,9 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 - [x] マルチ音声エンジン対応（完了）
 - [ ] 音声品質設定（サンプリングレート等）
 - [ ] マークダウン対応
+- [ ] YouTube Superチャット対応
+- [ ] YouTube メンバーシップ限定チャット対応
+- [ ] OpenAI統合によるスマートチャット選択
 
 ### Phase 3: 高度な機能
 - [ ] マルチキャラクター対応（複数Live2Dモデル）
@@ -931,6 +1100,30 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 2. ページ内で一度クリックしてからメッセージ送信
 3. ブラウザの自動再生設定を許可に変更
 
+#### Q10: YouTubeライブチャットが取得できない（NEW）
+**症状**: 「API Keyが無効」「動画が見つかりません」エラーが発生
+**原因と対処法**:
+1. **API Key確認**: YouTube Data API v3の有効なキーが設定されているか確認
+2. **配信状態確認**: 指定した動画が現在ライブ配信中かつチャットが有効か確認
+3. **動画ID確認**: 正しい動画IDまたはYouTube URLが入力されているか確認
+4. **APIクォータ**: YouTube Data APIの日次制限（10,000リクエスト）を超えていないか確認
+
+#### Q11: YouTubeチャットに応答しない（NEW）
+**症状**: チャットは取得できるが、Natoriが応答しない
+**原因と対処法**:
+1. **重複メッセージ確認**: 同一メッセージは5分間処理されません
+2. **Gemini API確認**: Cloud Runサーバーとの接続を確認
+3. **JavaScript エラー**: 開発者ツールでコンソールエラーを確認
+4. **チャット間隔調整**: 短すぎる間隔（5秒未満）は避けてください
+
+#### Q12: YouTube監視が自動停止する（NEW）
+**症状**: しばらくすると監視が停止してしまう
+**原因と対処法**:
+1. **配信終了**: ライブ配信が終了した場合は自動停止します
+2. **ネットワークエラー**: インターネット接続を確認してください
+3. **API制限**: YouTube APIの制限に達している可能性があります
+4. **ブラウザタブ**: タブを切り替えても監視は継続しますが、ブラウザを閉じると停止します
+
 ---
 
 ## 更新履歴
@@ -1026,6 +1219,27 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 
 ## 更新履歴
 
+### Version 2.3.0 (2025-06-10) - YouTubeライブチャット連携
+- **📺 YouTubeライブチャット統合**: YouTube Data API v3を使用したライブチャット自動監視機能
+  - 自動チャット取得: 指定間隔でのライブチャットメッセージ取得
+  - リアルタイム応答: 取得したコメントに対するNatoriの自動応答
+  - 重複防止システム: 処理済みメッセージ管理とタイムアウト処理
+- **YouTube設定パネル**: 折りたたみ式UI設計による直感的な設定管理
+  - YouTube API Key入力（パスワード形式で安全管理）
+  - 配信ID入力（YouTube URL自動解析対応）
+  - チェック間隔設定（5-60秒の範囲）
+  - 設定値のLocalStorage自動保存・復元
+- **視覚的統合**: YouTubeメッセージ専用スタイリング
+  - 🎥アイコン付きメッセージ表示
+  - 赤グラデーション背景デザイン
+  - YouTubeタグによる明確な視覚的区別
+- **エラーハンドリング**: 包括的なエラー処理システム
+  - API制限・認証エラーの適切な処理
+  - 接続失敗時のフォールバック機能
+  - ユーザーフレンドリーなエラーメッセージ
+- **ファイル構成更新**: `youtube-chat-integration.js`モジュール追加
+- **Live2D統合**: YouTubeコメントに対する感情表現とリップシンク対応
+
 ### Version 2.1.2 (2025-06-08)
 - **デフォルト音声エンジン変更**: AivisSpeech Engineを標準設定に変更
   - 起動時デフォルト: WebSpeech → AivisSpeech Engine
@@ -1044,5 +1258,5 @@ const CLOUD_FUNCTION_URL = "https://gemini-chatbot-proxy-636074041441.asia-north
 
 ### Version 2.1.0 (2025-06-07)
 
-*このドキュメントは Gemini Chatbot with Live2D (Chloe Edition) v2.1.1 の技術仕様を記載しています。*
-*Live2D統合により、リアルタイムキャラクターアニメーションと音声連携機能を提供します。*
+*このドキュメントは Gemini Chatbot with Live2D (Natori Edition) v2.3.0 の技術仕様を記載しています。*
+*Live2D統合とYouTubeライブチャット連携により、リアルタイムキャラクターアニメーションと自動配信応答機能を提供します。*

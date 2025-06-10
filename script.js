@@ -546,9 +546,18 @@ function appendMessage(sender, text) {
     chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
 }
 
+// YouTube統合用: メッセージをチャットボットに送信する関数
+// addToHistory=falseの場合、チャット履歴に重複して追加されない
+window.sendMessageToChatbot = function(message, addToHistory = true) {
+    sendMessageToCloudFunction(message, addToHistory);
+};
+
 // Cloud Functions経由でGemini APIへのリクエストを送信する関数
-async function sendMessageToCloudFunction(message) {
-    appendMessage('user', message); // ユーザーメッセージを即座に表示
+async function sendMessageToCloudFunction(message, addToHistory = true) {
+    // YouTube統合の場合、既にチャット履歴に追加されているのでスキップ
+    if (addToHistory) {
+        appendMessage('user', message); // ユーザーメッセージを即座に表示
+    }
 
     // ローディング表示
     const thinkingMessageDiv = document.createElement('div');
