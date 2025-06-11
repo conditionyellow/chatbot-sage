@@ -1,0 +1,13 @@
+::1 - - [11/Jun/2025 18:17:52] "GET / HTTP/1.1" 200 -
+::1 - - [11/Jun/2025 18:17:52] "GET /style.css HTTP/1.1" 200 -
+::1 - - [11/Jun/2025 18:17:52] "GET /emotion-analyzer-v2.js HTTP/1.1" 200 -
+::1 - - [11/Jun/2025 18:17:52] "GET /backend-client.js HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:17:52] "GET /models/natori/runtime/natori_pro_t06.moc3 HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:17:52] "GET /models/natori/runtime/natori_pro_t06.4096/texture_00.png HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:17:52] "GET /models/natori/runtime/motions/mtn_01.motion3.json HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:17:52] "GET /models/natori/runtime/motions/mtn_00.motion3.json HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:17:52] "GET /models/natori/runtime/motions/mtn_02.motion3.json HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:17:52] "GET /models/natori/runtime/natori.pose3.json HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:17:52] "GET /models/natori/runtime/natori_pro_t06.physics3.json HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:17:52] code 404, message File not found
+::1 - - [11/Jun/2025 18:17:52] "GET /favicon.ico HTTP/1.1" 404 -

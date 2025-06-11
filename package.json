@@ -4,8 +4,11 @@
   "description": "AI-powered chatbot with Live2D integration and emotion analysis",
   "main": "server/app.js",
   "scripts": {
-    "start": "node server/app.js",
-    "dev": "nodemon server/app.js",
+    "start": "node scripts/start-all.js",
+    "stop": "node scripts/stop-all.js",
+    "dev": "node scripts/start-all.js --dev",
+    "backend": "node server/app.js",
+    "backend-dev": "nodemon server/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -17,6 +20,7 @@
   "author": "Chloe",
   "license": "ISC",
   "dependencies": {
+    "chalk": "^4.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
@@ -26,7 +30,6 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "chalk": "^5.4.1",
     "nodemon": "^3.0.2",
     "socket.io-client": "^4.8.1"
   }

@@ -1,0 +1,55 @@
+✅ Auth routes loaded
+✅ YouTube routes loaded
+✅ Config routes loaded
+✅ Logs routes loaded
+✅ Debug routes loaded
+🚀 ChatBot Sage Backend Server started on port 3001
+📊 Environment: development
+🔗 Frontend URL: http://localhost:8080
+⚙️ Admin URL: http://localhost:8081
+🔌 WebSocket サーバー初期化完了
+[33m[nodemon] 3.1.10[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node /Users/oyaryo/Library/CloudStorage/OneDrive-Personal/1use/web/conditionyellow/test/chatbot_sage/server/app.js`[39m
+✅ Auth routes loaded
+✅ YouTube routes loaded
+✅ Config routes loaded
+✅ Logs routes loaded
+✅ Debug routes loaded
+🚀 ChatBot Sage Backend Server started on port 3001
+📊 Environment: development
+🔗 Frontend URL: http://localhost:8080
+⚙️ Admin URL: http://localhost:8081
+🔌 WebSocket サーバー初期化完了
+✅ Auth routes loaded
+✅ YouTube routes loaded
+✅ Config routes loaded
+✅ Logs routes loaded
+✅ Debug routes loaded
+🚀 ChatBot Sage Backend Server started on port 3001
+📊 Environment: development
+🔗 Frontend URL: http://localhost:8080
+⚙️ Admin URL: http://localhost:8081
+🔌 WebSocket サーバー初期化完了
+🔗 クライアント接続: VNkZMJaVdjJEIQlRAAAB
+⚙️ 管理画面クライアント登録: VNkZMJaVdjJEIQlRAAAB
+🔐 管理画面認証完了: VNkZMJaVdjJEIQlRAAAB
+✅ 管理者ログイン成功: admin at 2025-06-11T09:18:11.031Z
+📝 設定ファイル保存完了: ./data/config.json
+📋 設定取得要求
+📋 設定取得要求
+📋 設定取得要求
+📋 設定取得要求
+📤 管理者ログアウト: admin
+✅ Auth routes loaded
+✅ YouTube routes loaded
+✅ Config routes loaded
+✅ Logs routes loaded
+✅ Debug routes loaded
+🚀 ChatBot Sage Backend Server started on port 3001
+📊 Environment: development
+🔗 Frontend URL: http://localhost:8080
+⚙️ Admin URL: http://localhost:8081
+🔌 WebSocket サーバー初期化完了

@@ -24,40 +24,7 @@
                 <button id="expression-angry" title="怒り">😠</button>
                 <button id="expression-normal" title="通常">😐</button>
             </div>
-            
-            <!-- 感情分析デバッグパネル -->
-            <div class="emotion-debug-panel" id="emotion-debug" style="display:none;">
-                <h4>🧠 感情分析デバッグ</h4>
-                <div class="emotion-test-buttons">
-                    <button onclick="window.EmotionAnalyzer.testEmotion('happy')" class="emotion-btn">😊 幸せ</button>
-                    <button onclick="window.EmotionAnalyzer.testEmotion('surprised')" class="emotion-btn">😮 驚き</button>
-                    <button onclick="window.EmotionAnalyzer.testEmotion('sad')" class="emotion-btn">😢 悲しみ</button>
-                    <button onclick="window.EmotionAnalyzer.testEmotion('angry')" class="emotion-btn">😠 怒り</button>
-                    <button onclick="window.EmotionAnalyzer.testEmotion('excited')" class="emotion-btn">⚡ 興奮</button>
-                    <button onclick="window.EmotionAnalyzer.testEmotion('thinking')" class="emotion-btn">🤔 思考</button>
-                    <button onclick="window.EmotionAnalyzer.testEmotion('neutral')" class="emotion-btn">😐 中立</button>
-                </div>
-                <div class="emotion-stats">
-                    <button onclick="console.log(window.EmotionAnalyzer.getEmotionStats())" class="stats-btn">📊 統計表示</button>
-                    <button onclick="window.EmotionTestSuite.runEmotionTests()" class="stats-btn">🧪 一括テスト</button>
-                    <button onclick="window.EmotionTestSuite.testSpecificEmotions()" class="stats-btn">🎯 特定感情テスト</button>
-                    <button onclick="window.runCompleteTest()" class="stats-btn">🚀 完全テスト</button>
-                    <button onclick="window.runQuickEmotionTest()" class="stats-btn">🧠 感情テスト</button>
-                    <button onclick="window.runQuickLive2DTest()" class="stats-btn">🎭 Live2Dテスト</button>
-                    <button onclick="window.testLipSync && window.testLipSync()" class="stats-btn">👄 リップシンクテスト</button>
-                </div>
-                <div class="personality-test-buttons">
-                    <button onclick="window.NatoriPersonality.debug.testAllTraits()" class="personality-btn">👸 性格特徴テスト</button>
-                    <button onclick="window.NatoriPersonality.debug.testSpecialResponses()" class="personality-btn">🌟 特別応答テスト</button>
-                    <button onclick="window.NatoriPersonality.debug.showSystemPrompt()" class="personality-btn">📜 システムプロンプト</button>
-                    <button onclick="window.NatoriPersonality.debug.testEmotionalModifier('happy')" class="personality-btn">😊 幸せ修飾</button>
-                    <button onclick="window.NatoriPersonality.debug.testEmotionalModifier('shy')" class="personality-btn">😳 恥ずかしがり</button>
-                    <button onclick="document.getElementById('emotion-debug').style.display='none'" class="close-btn">❌ 閉じる</button>
-                </div>
-            </div>
-            
-            <!-- デバッグボタン -->
-            <button id="toggle-debug" class="debug-toggle" onclick="document.getElementById('emotion-debug').style.display=document.getElementById('emotion-debug').style.display==='none'?'block':'none'">🔧</button>
+
         </div>
         
         <!-- チャットボットエリア -->
@@ -85,24 +52,8 @@
     <script src="natori-personality.js"></script>
     <!-- Emotion Analysis Engine v2.0 -->
     <script src="emotion-analyzer-v2.js"></script>
-    <!-- Emotion Analysis Test Suite -->
-    <script src="test-emotion-responses.js"></script>
-    <!-- Emotion Analysis Debugger -->
-    <script src="emotion-debugger.js"></script>
-    <!-- Emotion Test Mock (for testing without API calls) -->
-    <script src="emotion-test-mock.js"></script>
-    <!-- Test Fixes -->
-    <script src="test-fixes.js"></script>
-    <!-- Chloe's Comprehensive Test Suite -->
-    <script src="chloe-test-suite.js"></script>
-    <!-- Chloe's Quick Test Messages -->
-    <script src="chloe-quick-test.js"></script>
-    <!-- Chloe's Lip Sync Test Suite -->
-    <script src="lip-sync-test.js"></script>
     <!-- Backend Communication -->
     <script src="backend-client.js"></script>
-    <!-- Debug WebSocket Client -->
-    <script src="debug-websocket.js"></script>
     <!-- Main Chatbot Script -->
     <script src="script.js"></script>
 </body>

@@ -132,12 +132,36 @@ app.post('/tts', async (req, res) => {
    const TTS_API_URL = "https://your-cloud-function-url/tts";
    ```
 
-## トラブルシューティング
+## アプリケーション起動と設定
 
-### よくある問題
+### 統合起動システム（v3.2.0以降）
+
+#### アプリケーション起動
+```bash
+# 全サーバー統合起動
+npm start
+
+# 開発モード
+npm run dev
+
+# 停止
+npm stop
+```
+
+#### アクセス先
+- **フロントエンド**: http://localhost:8080
+- **管理画面**: http://localhost:8081 (admin / chloe2025)
+- **バックエンドAPI**: http://localhost:3001
+
+#### Google TTS設定
+1. 管理画面にアクセス: http://localhost:8081
+2. 「システム設定」でGoogle TTSの設定を管理
+3. フロントエンドで🎵ボタンによる音声エンジン切り替え
+
+## 統合起動システム対応のトラブルシューティング
 
 1. **認証エラー**
-   - サービスアカウントキーが正しく設定されているか確認
+   - サービスアカウントキーの確認
    - Text-to-Speech APIが有効化されているか確認
 
 2. **音声が再生されない**
@@ -147,6 +171,15 @@ app.post('/tts', async (req, res) => {
 3. **文字数制限**
    - 1回のリクエストで5000文字まで
    - 長いテキストは分割が必要
+
+4. **統合起動システム関連**
+   - `npm stop`で完全停止後、`npm start`で再起動
+   - ログファイル確認: `logs/backend.log`
+   - プロセス確認: `.pids`ファイルの状態
+
+5. **音声エンジン切り替え問題**
+   - フロントエンドで🎵ボタンを使用して切り替え
+   - 自動フォールバック機能により他のエンジンに切り替わる
 
 ## セキュリティ考慮事項
 
@@ -158,8 +191,14 @@ app.post('/tts', async (req, res) => {
    - XSS攻撃の防止
    - 不適切な内容のフィルタリング
 
-## 参考リンク
+3. **統合システムセキュリティ**
+   - プロセス分離による安全な実行
+   - ログファイルの自動クリーンアップ
+   - localhost制限による外部アクセス防止
+   - PIDファイルによる確実なプロセス管理
 
-- [Google Cloud Text-to-Speech Documentation](https://cloud.google.com/text-to-speech/docs)
-- [Node.js Client Library](https://googleapis.dev/nodejs/text-to-speech/latest/)
-- [SSML Reference](https://cloud.google.com/text-to-speech/docs/ssml)
+---
+
+**最終更新**: 2025年6月11日  
+**対応バージョン**: 3.2.0 (Unified Startup System)  
+**統合起動システム**: 完全対応

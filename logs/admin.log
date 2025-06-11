@@ -1,0 +1,4 @@
+::1 - - [11/Jun/2025 18:18:03] "GET / HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:18:03] "GET /admin-style.css HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:18:03] "GET /admin-websocket.js HTTP/1.1" 304 -
+::1 - - [11/Jun/2025 18:18:03] "GET /admin-script.js HTTP/1.1" 304 -

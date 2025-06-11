@@ -1,0 +1,12 @@
+{
+  "youtubeApiKey": "",
+  "videoId": "",
+  "checkInterval": 10,
+  "systemSettings": {
+    "enableLogging": true,
+    "logLevel": "info",
+    "maxLogEntries": 1000
+  },
+  "created": "2025-06-11T09:17:38.931Z",
+  "lastUpdated": "2025-06-11T09:18:19.890Z"
+}

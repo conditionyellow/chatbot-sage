@@ -26,20 +26,10 @@ function scheduleEmotionRestore() {
         currentEmotionState.restoreTimer = null;
     }
     
-    // 音声終了時の復帰コールバックを設定
+    // 音声終了時の復帰コールバックを設定（バック機能削除により簡素化）
     currentEmotionState.speechEndCallback = () => {
-        setTimeout(async () => {
-            try {
-                if (window.Live2DController) {
-                    await window.Live2DController.setExpression('Normal');
-                    console.log('🔄 音声終了後に表情をNormalに復元');
-                    currentEmotionState.expression = 'Normal';
-                    currentEmotionState.isPlaying = false;
-                }
-            } catch (error) {
-                console.error('❌ 音声終了後の表情復元エラー:', error);
-            }
-        }, 500); // 音声終了後0.5秒で復帰
+        console.log('🔄 音声終了通知受信');
+        currentEmotionState.isPlaying = false;
     };
     
     console.log('🎭 感情復帰コールバック設定完了');
@@ -54,23 +44,6 @@ window.scheduleEmotionRestore = () => {
         currentEmotionState.speechEndCallback();
     } else {
         console.warn('⚠️ 感情復帰コールバックが設定されていません');
-        
-        // フォールバック処理：直接Normalに戻す
-        setTimeout(async () => {
-            try {
-                if (window.Live2DController && currentEmotionState.isPlaying) {
-                    console.log('🔄 フォールバック感情復帰実行');
-                    const result = await window.Live2DController.setExpression('Normal');
-                    console.log('🔄 フォールバック：表情をNormalに復元 -', result ? '成功' : '失敗');
-                    currentEmotionState.expression = 'Normal';
-                    currentEmotionState.isPlaying = false;
-                } else {
-                    console.log('🔄 感情復帰スキップ: Live2DController利用不可 または 感情再生中ではない');
-                }
-            } catch (error) {
-                console.error('❌ フォールバック感情復元エラー:', error);
-            }
-        }, 500);
     }
     
     // 🔧 状態確認のための追加ログ
@@ -422,15 +395,15 @@ async function applyEmotionToLive2D(text, options = {}) {
             }
         }
 
-        // 🔧 音声終了連動の感情復帰システム（時間ベース復帰を無効化）
+        // 🔧 音声終了連動の感情制御システム（バック機能削除により簡素化）
         if (expressionResult && analysis.emotion !== 'neutral') {
             // 感情状態を記録
             currentEmotionState.expression = analysis.priority.expression;
             currentEmotionState.isPlaying = true;
             
-            // 音声終了時の復帰処理をスケジュール
+            // 音声終了時の処理をスケジュール（復帰なし）
             scheduleEmotionRestore();
-            console.log('🎭 感情表現開始 - 音声終了まで維持');
+            console.log('🎭 感情表現開始');
         }
 
         return {
@@ -506,410 +479,35 @@ function getEmotionStats() {
     return stats;
 }
 
-// デバッグ用感情テスト関数（拡張版）
-function testEmotion(emotion) {
-    const testPhrases = {
-        happy: 'とても嬉しいです！素晴らしい一日ですね！ハッピーな気分です！',
-        surprised: 'えー！本当ですか？びっくりしました！まさかそんなことが！',
-        sad: '悲しいことがありました。とても辛くて残念です。涙が出そうです。',
-        angry: 'それは許せません！とても腹が立ちます！ムカつく問題ですね！',
-        excited: 'やる気満々です！エキサイトしています！テンション上がってきた！',
-        thinking: 'う～ん、どうしようかな。難しい問題ですね。よく考える必要があります。',
-        neutral: 'こんにちは。よろしくお願いします。ありがとうございます。'
-    };
-    
-    const testPhrase = testPhrases[emotion] || testPhrases.neutral;
-    console.log(`🧪 感情テスト開始: ${emotion}`);
-    console.log(`📝 テストフレーズ: ${testPhrase}`);
-    
-    // 詳細分析も同時に実行
-    const analysis = analyzeEmotion(testPhrase);
-    console.log(`🎯 分析結果:`, analysis);
-    
-    // Live2D制御を実行
-    return window.EmotionAnalyzer.applyEmotionToLive2D(testPhrase).then(result => {
-        console.log(`🎭 制御結果:`, result);
-        
-        // 特別な確認メッセージ
-        if (emotion === 'thinking' || emotion === 'neutral') {
-            console.log(`💡 ${emotion}テスト: 表情が「Normal」に変更され、モーションが「${analysis.priority?.motion}」で実行されました。`);
-            console.log(`👀 期待する動作: キャラクターの表情がニュートラルになり、${emotion === 'thinking' ? '頭をタップする' : 'アイドル状態の'}モーションが再生されます。`);
-        }
-        
-        return result;
-    });
-}
 
-// 感情キーワード動的追加（改良版）
-function addEmotionKeywords(emotion, newKeywords) {
-    if (!emotionKeywords[emotion]) {
-        console.warn(`⚠️ 未知の感情カテゴリ: ${emotion}`);
-        return false;
-    }
-    
-    if (!Array.isArray(newKeywords)) {
-        console.warn('⚠️ キーワードは配列で指定してください');
-        return false;
-    }
-    
-    const beforeCount = emotionKeywords[emotion].keywords.length;
-    emotionKeywords[emotion].keywords.push(...newKeywords);
-    const afterCount = emotionKeywords[emotion].keywords.length;
-    
-    console.log(`🧠 感情キーワード追加: ${emotion} (${beforeCount} → ${afterCount})`);
-    return true;
-}
 
-// 感情分析結果の詳細ログ
-function logEmotionAnalysis(text) {
-    const analysis = analyzeEmotion(text);
-    console.group('🔍 詳細感情分析結果');
-    console.log('📝 入力テキスト:', text);
-    console.log('🎯 判定感情:', analysis.emotion);
-    console.log('📊 信頼度:', analysis.confidence.toFixed(3));
-    console.log('🔢 生スコア:', analysis.rawScore);
-    console.log('🎭 優先表情:', analysis.priority?.expression);
-    console.log('🎬 優先モーション:', analysis.priority?.motion);
-    console.log('🏷️ 検出キーワード:', analysis.keywords);
-    console.log('📈 全結果:', analysis.allResults);
-    console.groupEnd();
-    return analysis;
-}
 
-// Live2D状態確認関数
-function checkLive2DStatus() {
-    console.group('🎭 Live2D状態確認');
-    console.log('Live2DController利用可能:', !!window.Live2DController);
-    console.log('Live2D初期化状態:', window.Live2DController?.isAvailable());
-    console.log('現在のモデル:', !!window.currentModel);
-    
-    if (window.Live2DController && window.Live2DController.isAvailable()) {
-        // 現在の表情を確認
-        console.log('現在の表情:', window.currentModel ? '設定済み' : '未設定');
-        
-        // 利用可能な表情とモーションを表示
-        console.log('利用可能な表情:', availableLive2DAssets.expressions);
-        console.log('利用可能なモーション:', availableLive2DAssets.motionGroups);
-    } else {
-        console.warn('⚠️ Live2Dが利用できません');
-    }
-    console.groupEnd();
-}
 
-// 🔧 デバッグ用: angry感情のテスト関数（詳細版）
-window.testAngryEmotion = async function(testText = "それは許せません！とても腹が立ちます！") {
-    console.log('🔴 Angry感情テスト開始:', testText);
-    
-    // 感情分析をテスト
-    const analysis = analyzeEmotion(testText);
-    console.log('🔍 分析結果:', analysis);
-    
-    if (analysis.emotion === 'angry') {
-        console.log('✅ Angry感情の検出成功');
-        console.log('🎭 表情設定:', analysis.priority.expression);
-        console.log('🎬 モーション設定:', analysis.priority.motion);
-        
-        // Live2D表情変更をテスト
-        if (window.Live2DController) {
-            try {
-                console.log('🎭 Live2D表情変更実行中...');
-                const result = await window.Live2DController.setExpression(analysis.priority.expression);
-                console.log('🎭 表情変更結果:', result, '(', analysis.priority.expression, ')');
-                
-                // 実際に設定された表情を確認
-                if (window.currentModel && window.currentModel.internalModel) {
-                    const settings = window.currentModel.internalModel.settings;
-                    if (settings && settings.expressions) {
-                        console.log('🔍 利用可能な表情:', settings.expressions.map(exp => exp.Name || exp.name));
-                        
-                        // 現在の表情状態をチェック
-                        setTimeout(() => {
-                            console.log('🔍 現在の表情状態:', window.Live2DController ? 'Live2DController利用可能' : 'Live2DController利用不可');
-                            if (window.currentModel && window.currentModel.internalModel) {
-                                console.log('🔍 モデル状態:', {
-                                    modelLoaded: !!window.currentModel,
-                                    internalModel: !!window.currentModel.internalModel,
-                                    expressionManager: !!window.currentModel.internalModel.expressionManager
-                                });
-                            }
-                        }, 1000);
-                    }
-                }
-            } catch (error) {
-                console.error('❌ 表情変更エラー:', error);
-            }
-        } else {
-            console.warn('⚠️ Live2DController が存在しません');
-        }
-    } else {
-        console.warn('⚠️ Angry感情が検出されませんでした。実際の感情:', analysis.emotion);
-        console.log('🔍 全感情スコア:', analysis.allResults);
-    }
-    
-    return analysis;
-};
 
-// 🔧 デバッグ用: 直接表情変更テスト
-window.testDirectExpression = async function(expressionName = 'Angry') {
-    console.log('🎭 直接表情変更テスト:', expressionName);
-    
-    if (window.Live2DController) {
-        try {
-            const result = await window.Live2DController.setExpression(expressionName);
-            console.log('🎭 直接表情変更結果:', result, '(', expressionName, ')');
-            return result;
-        } catch (error) {
-            console.error('❌ 直接表情変更エラー:', error);
-            return false;
-        }
-    } else {
-        console.warn('⚠️ Live2DController が存在しません');
-        return false;
-    }
-};
 
-// 🔧 デバッグ用: 感情→表情のフローテスト
-window.testEmotionFlow = async function(testText = "それは許せません！") {
-    console.log('🔄 感情→表情フローテスト開始:', testText);
-    
-    try {
-        // ステップ1: 感情分析
-        console.log('📊 ステップ1: 感情分析');
-        const analysis = analyzeEmotion(testText);
-        console.log('結果:', analysis);
-        
-        // ステップ2: Live2D制御
-        console.log('🎭 ステップ2: Live2D制御');
-        const live2dResult = await applyEmotionToLive2D(testText);
-        console.log('結果:', live2dResult);
-        
-        // ステップ3: 状態確認
-        console.log('🔍 ステップ3: 状態確認');
-        setTimeout(() => {
-            if (window.currentModel) {
-                console.log('現在のモデル状態: 読み込み済み');
-                if (window.currentModel.internalModel && window.currentModel.internalModel.settings) {
-                    console.log('利用可能な表情数:', window.currentModel.internalModel.settings.expressions.length);
-                }
-            } else {
-                console.log('現在のモデル状態: 未読み込み');
-            }
-        }, 500);
-        
-        return { analysis, live2dResult };
-    } catch (error) {
-        console.error('❌ フローテストエラー:', error);
-        return { error };
-    }
-};
 
-// 🔧 デバッグ用: 全感情テスト関数
-window.testAllEmotions = async function() {
-    const testTexts = {
-        happy: '素晴らしい！とても嬉しいです！',
-        sad: '悲しいです。とても残念な気持ちです',
-        angry: 'それは許せません！とても腹が立ちます！',
-        surprised: 'びっくりした！まさか！',
-        neutral: 'こんにちは。よろしくお願いします',
-        excited: 'やった！エキサイティングです！',
-        thinking: 'う～ん、考えてみますね。難しい問題ですね'
-    };
-    
-    for (const [emotion, text] of Object.entries(testTexts)) {
-        console.log(`\n🧪 ${emotion.toUpperCase()}感情テスト:`, text);
-        const analysis = analyzeEmotion(text);
-        console.log(`結果: ${analysis.emotion} (信頼度: ${analysis.confidence.toFixed(3)})`);
-        
-        if (analysis.emotion === emotion) {
-            console.log('✅ 正しく検出');
-        } else {
-            console.warn('⚠️ 予期と異なる結果');
-        }
-    }
-};
 
-// 🔧 デバッグ用: 現在の状態を全て確認する関数
-window.checkSystemState = function() {
-    console.log('🔍 システム状態確認開始');
-    
-    // 1. Live2DController の状態
-    console.log('1️⃣ Live2DController:', {
-        exists: !!window.Live2DController,
-        isAvailable: window.Live2DController ? window.Live2DController.isAvailable() : false,
-        methods: window.Live2DController ? Object.keys(window.Live2DController) : []
-    });
-    
-    // 2. currentModel の状態
-    console.log('2️⃣ currentModel:', {
-        exists: !!window.currentModel,
-        hasInternalModel: !!(window.currentModel && window.currentModel.internalModel),
-        expressionsAvailable: window.currentModel && window.currentModel.internalModel && window.currentModel.internalModel.settings ? 
-            window.currentModel.internalModel.settings.expressions.length : 0
-    });
-    
-    // 3. 感情分析システムの状態
-    console.log('3️⃣ 感情分析システム:', {
-        analyzeEmotionExists: !!window.analyzeEmotion,
-        applyEmotionToLive2DExists: !!window.applyEmotionToLive2D,
-        scheduleEmotionRestoreExists: !!window.scheduleEmotionRestore,
-        currentEmotionState: currentEmotionState
-    });
-    
-    // 4. Live2D表情状態（利用可能な場合）
-    if (window.Live2DController && window.Live2DController.getCurrentExpressionState) {
-        console.log('4️⃣ Live2D表情状態:', window.Live2DController.getCurrentExpressionState());
-    }
-    
-    return {
-        live2d: !!window.Live2DController,
-        model: !!window.currentModel,
-        emotion: !!window.analyzeEmotion,
-        restore: !!window.scheduleEmotionRestore
-    };
-};
 
-// 🔧 デバッグ用: angry問題のトラブルシューティング
-window.troubleshootAngry = async function() {
-    console.log('🔴 Angry表情問題のトラブルシューティング開始');
-    
-    const testText = "それは許せません！とても腹が立ちます！ムカつく！";
-    
-    try {
-        // ステップ1: システム状態確認
-        console.log('🔍 ステップ1: システム状態確認');
-        const systemState = window.checkSystemState();
-        
-        if (!systemState.live2d) {
-            console.error('❌ Live2DControllerが利用できません');
-            return;
-        }
-        
-        // ステップ2: 感情分析テスト
-        console.log('🔍 ステップ2: 感情分析テスト');
-        const analysis = window.analyzeEmotion(testText);
-        console.log('感情分析結果:', analysis);
-        
-        if (analysis.emotion !== 'angry') {
-            console.warn('⚠️ angry感情が検出されませんでした');
-            return;
-        }
-        
-        // ステップ3: 表情リセット
-        console.log('🔍 ステップ3: 表情リセット');
-        await window.Live2DController.forceResetExpression();
-        
-        // ステップ4: Angry表情テスト
-        console.log('🔍 ステップ4: Angry表情直接テスト');
-        const directResult = await window.Live2DController.setExpression('Angry');
-        console.log('直接Angry表情設定結果:', directResult);
-        
-        // ステップ5: 表情状態確認
-        console.log('🔍 ステップ5: 表情状態確認');
-        setTimeout(() => {
-            const state = window.Live2DController.getCurrentExpressionState();
-            console.log('現在の表情状態:', state);
-            
-            if (state.currentExpression !== 'Angry') {
-                console.warn('⚠️ Angry表情が正しく設定されていません:', state.currentExpression);
-            } else {
-                console.log('✅ Angry表情が正しく設定されました');
-            }
-        }, 1000);
-        
-        return { analysis, directResult };
-        
-    } catch (error) {
-        console.error('❌ トラブルシューティングエラー:', error);
-        return { error };
-    }
-};
+
+
+
+
+
+
+
+
 
 // 🌟 感情分析エンジンをグローバルオブジェクトとしてエクスポート
 window.EmotionAnalyzer = {
     // 主要な感情分析関数
     analyzeEmotion: analyzeEmotion,
     applyEmotionToLive2D: applyEmotionToLive2D,
-    directAnalyze: analyzeEmotion,  // 直接分析用のエイリアス
     
     // 感情キーワード辞書
     emotionKeywords: emotionKeywords,
     
-    // 検索とデバッグ機能
-    searchKeywords: function(text, targetEmotion = null) {
-        console.log(`🔍 キーワード検索: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
-        
-        for (const [emotion, data] of Object.entries(emotionKeywords)) {
-            if (targetEmotion && emotion !== targetEmotion) continue;
-            
-            const foundKeywords = data.keywords.filter(keyword => 
-                text.toLowerCase().includes(keyword.toLowerCase())
-            );
-            
-            if (foundKeywords.length > 0) {
-                console.log(`  ✅ ${emotion}: [${foundKeywords.join(', ')}]`);
-            }
-        }
-    },
-    
-    // バッチテスト機能
-    batchTest: function(texts) {
-        console.log('🧪 バッチテスト開始:', texts.length, '件のテキスト');
-        const results = {};
-        
-        texts.forEach((text, index) => {
-            const analysis = analyzeEmotion(text);
-            const emotion = analysis.emotion;
-            
-            if (!results[emotion]) {
-                results[emotion] = [];
-            }
-            results[emotion].push({
-                index: index,
-                text: text.substring(0, 30) + (text.length > 30 ? '...' : ''),
-                confidence: analysis.confidence
-            });
-        });
-        
-        console.log('📊 バッチテスト結果:', results);
-        return results;
-    },
-    
-    // 感情分布分析
-    analyzeEmotionDistribution: function(texts) {
-        const distribution = {};
-        let totalConfidence = 0;
-        
-        texts.forEach(text => {
-            const analysis = analyzeEmotion(text);
-            const emotion = analysis.emotion;
-            
-            if (!distribution[emotion]) {
-                distribution[emotion] = { count: 0, totalConfidence: 0 };
-            }
-            
-            distribution[emotion].count++;
-            distribution[emotion].totalConfidence += analysis.confidence;
-            totalConfidence += analysis.confidence;
-        });
-        
-        // 平均信頼度を計算
-        for (const emotion in distribution) {
-            distribution[emotion].averageConfidence = 
-                distribution[emotion].totalConfidence / distribution[emotion].count;
-            distribution[emotion].percentage = 
-                (distribution[emotion].count / texts.length) * 100;
-        }
-        
-        console.log('📈 感情分布:', distribution);
-        return distribution;
-    },
-    
     // ユーティリティ関数
     getEmotionStats: getEmotionStats,
-    testEmotion: testEmotion,
-    addEmotionKeywords: addEmotionKeywords,
-    logEmotionAnalysis: logEmotionAnalysis,
-    checkLive2DStatus: checkLive2DStatus,
     
     // モーション再生
     playMotionByGroup: playMotionByGroup,
@@ -926,37 +524,11 @@ window.EmotionAnalyzer = {
             currentEmotionState.speechEndCallback();
             currentEmotionState.speechEndCallback = null;
         }
-    },
-    
-    // デバッグ関数群
-    debug: {
-        testAngryEmotion: function() {
-            console.log('🔥 Angry感情のテスト開始');
-            return testEmotion('angry');
-        },
-        
-        testAllEmotions: function() {
-            const emotions = ['happy', 'angry', 'sad', 'surprised', 'excited', 'thinking', 'neutral'];
-            console.log('🎭 全感情テスト開始');
-            
-            emotions.forEach((emotion, index) => {
-                setTimeout(() => {
-                    console.log(`▶️ ${emotion} テスト実行`);
-                    testEmotion(emotion);
-                }, index * 2000);
-            });
-        },
-        
-        troubleshootAngry: function() {
-            return troubleshootAngry();
-        }
     }
 };
 
 // 初期化完了ログ
 console.log('✅ 感情分析エンジンv2.0読み込み完了');
-console.log('🎯 利用可能な機能:', Object.keys(window.EmotionAnalyzer));
-console.log('🧠 感情キーワード辞書:', Object.keys(emotionKeywords));
 
 // 音声終了時の通知システムをグローバルに追加
 window.notifySpeechEnd = function() {
