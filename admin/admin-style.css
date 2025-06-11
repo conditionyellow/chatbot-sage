@@ -965,49 +965,149 @@ body {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
-/* ビデオIDヘルプ */
-.video-id-help details {
-    margin-top: 0.5rem;
-}
-
-.video-id-help summary {
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: var(--secondary-color);
-    font-weight: 500;
-}
-
-.video-id-help summary:hover {
-    color: var(--primary-color);
-}
-
-.video-id-help .help-content {
-    margin-top: 0.5rem;
-    padding: 0.75rem;
-    background: #f8f9fa;
+/* Live2D感情コントロールパネル */
+.emotion-control-panel {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 2px solid #dee2e6;
     border-radius: var(--radius);
-    border-left: 3px solid var(--secondary-color);
+    padding: 1.5rem;
+    margin: 1rem 0;
 }
 
-.video-id-help ul {
-    margin: 0.5rem 0;
-    padding-left: 1.5rem;
+.emotion-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
 }
 
-.video-id-help li {
-    margin: 0.25rem 0;
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
-    background: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+.emotion-btn {
+    padding: 0.75rem 1.25rem;
+    border: 2px solid transparent;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.video-id-help code {
-    background: #e9ecef;
-    padding: 0.125rem 0.25rem;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
+.emotion-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.emotion-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 各感情ボタンの色設定 */
+.emotion-btn.smile {
+    background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+    color: #2d3436;
+    border-color: #fdcb6e;
+}
+
+.emotion-btn.smile:hover {
+    background: linear-gradient(135deg, #fdcb6e, #e17055);
+    border-color: #e17055;
+}
+
+.emotion-btn.surprised {
+    background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+    color: white;
+    border-color: #6c5ce7;
+}
+
+.emotion-btn.surprised:hover {
+    background: linear-gradient(135deg, #6c5ce7, #5f3dc4);
+    border-color: #5f3dc4;
+}
+
+.emotion-btn.sad {
+    background: linear-gradient(135deg, #74b9ff, #0984e3);
+    color: white;
+    border-color: #0984e3;
+}
+
+.emotion-btn.sad:hover {
+    background: linear-gradient(135deg, #0984e3, #0056b3);
+    border-color: #0056b3;
+}
+
+.emotion-btn.angry {
+    background: linear-gradient(135deg, #ff7675, #d63031);
+    color: white;
+    border-color: #d63031;
+}
+
+.emotion-btn.angry:hover {
+    background: linear-gradient(135deg, #d63031, #a4161a);
+    border-color: #a4161a;
+}
+
+.emotion-btn.normal {
+    background: linear-gradient(135deg, #b2bec3, #636e72);
+    color: white;
+    border-color: #636e72;
+}
+
+.emotion-btn.normal:hover {
+    background: linear-gradient(135deg, #636e72, #2d3436);
+    border-color: #2d3436;
+}
+
+/* アクティブ状態 */
+.emotion-btn.active {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(52, 152, 219, 0.6);
+    border-color: #3498db;
+    border-width: 3px;
+}
+
+.emotion-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius);
+    border: 1px solid #dee2e6;
+}
+
+.status-label {
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.current-expression {
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.current-expression.updating {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
 }
 
 /* レスポンシブ対応 */
@@ -1042,6 +1142,21 @@ body {
     .filter-controls {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .emotion-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .emotion-btn {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    .emotion-status {
+        flex-direction: column;
+        gap: 0.5rem;
     }
 }
 

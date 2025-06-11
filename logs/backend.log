@@ -53,3 +53,41 @@
 🔗 Frontend URL: http://localhost:8080
 ⚙️ Admin URL: http://localhost:8081
 🔌 WebSocket サーバー初期化完了
+✅ Auth routes loaded
+✅ YouTube routes loaded
+✅ Config routes loaded
+✅ Logs routes loaded
+✅ Debug routes loaded
+🚀 ChatBot Sage Backend Server started on port 3001
+📊 Environment: development
+🔗 Frontend URL: http://localhost:8080
+⚙️ Admin URL: http://localhost:8081
+🔌 WebSocket サーバー初期化完了
+🔗 クライアント接続: tt1BSnrUidVOTLyiAAAB
+⚙️ 管理画面クライアント登録: tt1BSnrUidVOTLyiAAAB
+🔐 管理画面認証完了: tt1BSnrUidVOTLyiAAAB
+🔗 クライアント接続: tlCO1bPGumr9xvP4AAAD
+⚙️ 管理画面クライアント登録: tlCO1bPGumr9xvP4AAAD
+🔐 管理画面認証完了: tlCO1bPGumr9xvP4AAAD
+✅ 管理者ログイン成功: admin at 2025-06-11T09:50:32.998Z
+📋 設定取得要求
+📋 設定取得要求
+🔌 クライアント切断: tlCO1bPGumr9xvP4AAAD
+🔗 クライアント接続: Fmx_Qe_J7bq7E6deAAAF
+⚙️ 管理画面クライアント登録: Fmx_Qe_J7bq7E6deAAAF
+🔐 管理画面認証完了: Fmx_Qe_J7bq7E6deAAAF
+✅ Auth routes loaded
+✅ YouTube routes loaded
+✅ Config routes loaded
+✅ Logs routes loaded
+✅ Debug routes loaded
+🚀 ChatBot Sage Backend Server started on port 3001
+📊 Environment: development
+🔗 Frontend URL: http://localhost:8080
+⚙️ Admin URL: http://localhost:8081
+🔌 WebSocket サーバー初期化完了
+🔗 クライアント接続: ZKHY6uJZo91KmG7KAAAB
+⚙️ 管理画面クライアント登録: ZKHY6uJZo91KmG7KAAAB
+🔐 管理画面認証完了: ZKHY6uJZo91KmG7KAAAB
+✅ 管理者ログイン成功: admin at 2025-06-11T10:04:15.330Z
+🔌 クライアント切断: ZKHY6uJZo91KmG7KAAAB

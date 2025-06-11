@@ -209,6 +209,7 @@ class AdminApp {
                 break;
             case 'debug':
                 this.initDebugTools();
+                this.initEmotionControl();  // 感情コントロール初期化を追加
                 break;
         }
     }
@@ -785,6 +786,27 @@ class AdminApp {
         document.getElementById('reconnect-websocket')?.addEventListener('click', () => {
             this.reconnectWebSocket();
         });
+
+        // Live2D感情コントロール（NEW）
+        document.getElementById('set-expression-smile')?.addEventListener('click', () => {
+            this.setLive2DExpression('Smile');
+        });
+
+        document.getElementById('set-expression-surprised')?.addEventListener('click', () => {
+            this.setLive2DExpression('Surprised');
+        });
+
+        document.getElementById('set-expression-sad')?.addEventListener('click', () => {
+            this.setLive2DExpression('Sad');
+        });
+
+        document.getElementById('set-expression-angry')?.addEventListener('click', () => {
+            this.setLive2DExpression('Angry');
+        });
+
+        document.getElementById('set-expression-normal')?.addEventListener('click', () => {
+            this.setLive2DExpression('Normal');
+        });
     }
 
     initDebugTools() {
@@ -1262,6 +1284,110 @@ class AdminApp {
             this.showDebugResult('websocket-reconnect-result', 
                 '❌ WebSocketクライアントが初期化されていません\nページをリロードしてください。', 'error');
         }
+    }
+
+    // ============ Live2D感情コントロール機能（NEW） ============
+
+    /**
+     * Live2D表情を設定する
+     * @param {string} expressionName 表情名 (Smile, Surprised, Sad, Angry, Normal)
+     */
+    async setLive2DExpression(expressionName) {
+        this.debugLog(`🎭 Live2D表情変更: ${expressionName}`);
+        
+        // UIの更新（即座に反映）
+        this.updateEmotionUI(expressionName);
+        
+        try {
+            const result = await this.executeOnFrontend(`
+                if (window.Live2DController && window.Live2DController.setExpression) {
+                    const result = await window.Live2DController.setExpression('${expressionName}');
+                    return {
+                        success: result,
+                        expression: '${expressionName}',
+                        message: result ? '表情変更成功' : '表情変更失敗'
+                    };
+                } else {
+                    return {
+                        success: false,
+                        expression: '${expressionName}',
+                        error: 'Live2DControllerが利用できません'
+                    };
+                }
+            `);
+
+            if (result.error) {
+                this.showDebugResult('emotion-control-result', 
+                    `❌ 表情変更失敗: ${result.error}`, 'error');
+                // エラー時は元の状態に戻す
+                this.updateEmotionUI(this.currentExpression || 'Normal');
+            } else if (result.success) {
+                this.currentExpression = expressionName;
+                this.showDebugResult('emotion-control-result', 
+                    `✅ 表情変更成功: ${expressionName}`, 'success');
+                this.debugLog(`✅ Live2D表情変更完了: ${expressionName}`);
+            } else {
+                this.showDebugResult('emotion-control-result', 
+                    `⚠️ 表情変更結果不明: ${result.message || 'レスポンスなし'}`, 'warning');
+            }
+        } catch (error) {
+            this.showDebugResult('emotion-control-result', 
+                `❌ 通信エラー: ${error.message}`, 'error');
+            // エラー時は元の状態に戻す
+            this.updateEmotionUI(this.currentExpression || 'Normal');
+            this.debugLog(`❌ Live2D表情変更エラー: ${error.message}`);
+        }
+    }
+
+    /**
+     * 感情コントロールUIの更新
+     * @param {string} expressionName 現在の表情名
+     */
+    updateEmotionUI(expressionName) {
+        // 表情名マッピング
+        const expressionMap = {
+            'Smile': { id: 'set-expression-smile', label: '😊 笑顔' },
+            'Surprised': { id: 'set-expression-surprised', label: '😮 驚き' },
+            'Sad': { id: 'set-expression-sad', label: '😢 悲しみ' },
+            'Angry': { id: 'set-expression-angry', label: '😠 怒り' },
+            'Normal': { id: 'set-expression-normal', label: '😐 通常' }
+        };
+
+        // 全ボタンのアクティブ状態をリセット
+        Object.values(expressionMap).forEach(expr => {
+            const button = document.getElementById(expr.id);
+            if (button) {
+                button.classList.remove('active');
+            }
+        });
+
+        // 現在の表情ボタンをアクティブにする
+        const currentExpr = expressionMap[expressionName];
+        if (currentExpr) {
+            const activeButton = document.getElementById(currentExpr.id);
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+
+            // 現在の表情表示を更新
+            const displayElement = document.getElementById('current-expression-display');
+            if (displayElement) {
+                displayElement.textContent = currentExpr.label;
+                displayElement.classList.add('updating');
+                setTimeout(() => {
+                    displayElement.classList.remove('updating');
+                }, 500);
+            }
+        }
+    }
+
+    /**
+     * 感情コントロール初期化
+     */
+    initEmotionControl() {
+        this.currentExpression = 'Normal';
+        this.updateEmotionUI('Normal');
+        this.debugLog('🎭 感情コントロールシステム初期化完了');
     }
 }
 

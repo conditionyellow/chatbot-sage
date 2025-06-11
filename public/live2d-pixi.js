@@ -63,8 +63,8 @@ async function initializeLive2DPIXI() {
         }
         
         // コンテナサイズを計算（padding を考慮）
-        const containerWidth = 360;  // CSS で指定した幅
-        const containerHeight = 540; // CSS で指定した高さ
+        const containerWidth = 440;  // 360px から 440px に拡大
+        const containerHeight = 580; // 540px から 580px に拡大
         
         console.log(`コンテナサイズ: ${containerWidth}x${containerHeight}`);
         
@@ -99,9 +99,6 @@ async function initializeLive2DPIXI() {
         }
         
         console.log('✅ PIXI アプリケーション作成成功');
-        
-        // 表情ボタン設定
-        setupExpressionButtons();
         
         // Live2D モデル読み込み
         await loadLive2DModel();
@@ -225,7 +222,7 @@ function positionModel(model) {
 }
 
 /**
- * 表情変更
+ * 表情変更（管理画面からの制御用）
  */
 async function setExpression(expressionName) {
     if (!currentModel) {
@@ -295,71 +292,17 @@ async function setExpression(expressionName) {
             console.warn(`⚠️ 未対応の表情名: ${expressionName}`);
         }
         
-        currentExpression = expressionName;
-        updateExpressionButtons();
+        // 表情が正常に変更されたら記録
+        if (result) {
+            currentExpression = expressionName;
+            console.log(`✅ 表情変更完了: ${currentExpression}`);
+        }
         
         return result;
         
     } catch (error) {
         console.error('❌ 表情変更エラー:', error);
         return false;
-    }
-}
-
-/**
- * 表情ボタン設定
- */
-function setupExpressionButtons() {
-    const buttons = [
-        { id: 'expression-happy', expression: 'Smile' },
-        { id: 'expression-surprised', expression: 'Surprised' },
-        { id: 'expression-sad', expression: 'Sad' },
-        { id: 'expression-angry', expression: 'Angry' },
-        { id: 'expression-normal', expression: 'Normal' }
-    ];
-    
-    buttons.forEach(({ id, expression }) => {
-        const button = document.getElementById(id);
-        if (button) {
-            button.addEventListener('click', () => setExpression(expression));
-            console.log(`✅ ボタン設定完了: ${id} → ${expression}`);
-        }
-    });
-    
-    updateExpressionButtons();
-}
-
-/**
- * 表情ボタン更新
- */
-function updateExpressionButtons() {
-    const buttonMap = {
-        'Smile': 'expression-happy',
-        'Surprised': 'expression-surprised',
-        'Sad': 'expression-sad', 
-        'Angry': 'expression-angry',
-        'Normal': 'expression-normal'
-    };
-    
-    // 全ボタンリセット
-    Object.values(buttonMap).forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) {
-            btn.style.backgroundColor = '';
-            btn.style.transform = '';
-            btn.style.boxShadow = '';
-        }
-    });
-    
-    // アクティブボタンハイライト
-    const activeId = buttonMap[currentExpression];
-    if (activeId) {
-        const activeBtn = document.getElementById(activeId);
-        if (activeBtn) {
-            activeBtn.style.backgroundColor = '#2196f3';
-            activeBtn.style.transform = 'scale(1.1)';
-            activeBtn.style.boxShadow = '0 0 10px rgba(33, 150, 243, 0.5)';
-        }
     }
 }
 
