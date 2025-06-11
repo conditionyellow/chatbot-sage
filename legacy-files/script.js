@@ -457,13 +457,34 @@ function speakTextWithWebSpeech(text) {
     speechSynthesis.speak(utterance);
 }
 
-// 絵文字を除去する関数
+// 音声読み上げから除外する要素を削除する関数
 function removeEmojis(text) {
     // 絵文字を検出する正規表現
     // Unicode絵文字ブロックと追加の絵文字シンボルを削除
     const emojiRegex = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F270}]|[\u{238C}]|[\u{2194}-\u{2199}]|[\u{21A9}-\u{21AA}]|[\u{2934}-\u{2935}]|[\u{23CF}]|[\u{23E9}-\u{23F3}]|[\u{23F8}-\u{23FA}]|[\u{25AA}-\u{25AB}]|[\u{25B6}]|[\u{25C0}]|[\u{25FB}-\u{25FE}]|[\u{2B50}]|[\u{2B55}]|[\u{3030}]|[\u{303D}]|[\u{3297}]|[\u{3299}]/gu;
     
-    return text.replace(emojiRegex, '').trim();
+    // URLを検出する正規表現（http(s)://, www., ドメイン形式）
+    const urlRegex = /https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.([a-zA-Z]{2,})(\/[^\s]*)?/gi;
+    
+    // アスタリスク（*）を除去する正規表現
+    const asteriskRegex = /\*/g;
+    
+    // 順次除去処理
+    let cleanText = text;
+    
+    // 1. 絵文字を除去
+    cleanText = cleanText.replace(emojiRegex, '');
+    
+    // 2. URLを除去
+    cleanText = cleanText.replace(urlRegex, '');
+    
+    // 3. アスタリスク（*）を除去
+    cleanText = cleanText.replace(asteriskRegex, '');
+    
+    // 複数の空白や改行を整理
+    cleanText = cleanText.replace(/\s+/g, ' ').trim();
+    
+    return cleanText;
 }
 
 // 音声で読み上げる関数（エンジン選択対応）
@@ -472,12 +493,12 @@ function speakText(text) {
         return;
     }
     
-    // 絵文字を除去してから音声合成
+    // 絵文字、「*」、URLを除去してから音声合成
     const cleanText = removeEmojis(text);
     
-    // 絵文字を除去した結果、空文字列になった場合は読み上げしない
+    // 除去した結果、空文字列になった場合は読み上げしない
     if (!cleanText || cleanText.length === 0) {
-        console.log('絵文字除去後にテキストが空になったため、音声読み上げをスキップしました');
+        console.log('絵文字、*、URL除去後にテキストが空になったため、音声読み上げをスキップしました');
         return;
     }
     
