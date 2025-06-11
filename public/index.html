@@ -64,24 +64,6 @@
         <div class="chatbot-container">
             <h1>Gemini Chatbot with Natori</h1>
             
-            <!-- YouTube監視状況表示（読み取り専用） -->
-            <div class="youtube-status-display" id="youtube-status-display">
-                <div class="status-header">
-                    <h3>📺 YouTube ライブチャット</h3>
-                    <span id="youtube-monitoring-indicator" class="status-indicator offline">
-                        <span class="status-dot"></span>
-                        <span class="status-text">未接続</span>
-                    </span>
-                </div>
-                <div class="status-details" id="youtube-status-details" style="display: none;">
-                    <p>📺 ライブ配信: <span id="current-video-info">未設定</span></p>
-                    <p>💬 処理済みメッセージ: <span id="processed-message-count">0</span></p>
-                </div>
-                <div class="admin-link">
-                    <p><small>設定変更は <a href="http://localhost:8081" target="_blank">管理画面</a> で行えます</small></p>
-                </div>
-            </div>
-            
             <div class="chat-history" id="chat-history">
                 <div class="message bot-message">こんにちは！私はNatoriです。何か質問がありますか？</div>
             </div>
@@ -119,6 +101,8 @@
     <script src="lip-sync-test.js"></script>
     <!-- Backend Communication -->
     <script src="backend-client.js"></script>
+    <!-- Debug WebSocket Client -->
+    <script src="debug-websocket.js"></script>
     <!-- Main Chatbot Script -->
     <script src="script.js"></script>
 </body>

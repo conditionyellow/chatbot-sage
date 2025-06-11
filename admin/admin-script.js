@@ -87,6 +87,9 @@ class AdminApp {
         document.getElementById('log-filter-level').addEventListener('change', () => {
             this.loadLogs();
         });
+
+        // デバッグツールのイベントリスナー
+        this.setupDebugEventListeners();
     }
 
     async checkAuthStatus() {
@@ -203,6 +206,9 @@ class AdminApp {
                 break;
             case 'logs':
                 this.loadLogs();
+                break;
+            case 'debug':
+                this.initDebugTools();
                 break;
         }
     }
@@ -721,6 +727,540 @@ class AdminApp {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
+        }
+    }
+
+    // ===== デバッグツール機能 =====
+
+    setupDebugEventListeners() {
+        // フロントエンド接続テスト
+        document.getElementById('test-frontend-connection')?.addEventListener('click', () => {
+            this.testFrontendConnection();
+        });
+
+        document.getElementById('get-frontend-status')?.addEventListener('click', () => {
+            this.getFrontendStatus();
+        });
+
+        // 感情分析デバッグ
+        document.getElementById('analyze-emotion')?.addEventListener('click', () => {
+            this.analyzeEmotion();
+        });
+
+        document.getElementById('run-emotion-tests')?.addEventListener('click', () => {
+            this.runEmotionTests();
+        });
+
+        document.getElementById('check-emotion-keywords')?.addEventListener('click', () => {
+            this.checkEmotionKeywords();
+        });
+
+        // Live2Dデバッグ
+        document.getElementById('check-live2d-status')?.addEventListener('click', () => {
+            this.checkLive2DStatus();
+        });
+
+        document.getElementById('test-live2d-expressions')?.addEventListener('click', () => {
+            this.testLive2DExpressions();
+        });
+
+        document.getElementById('test-live2d-motions')?.addEventListener('click', () => {
+            this.testLive2DMotions();
+        });
+
+        // システム統合テスト
+        document.getElementById('run-quick-test')?.addEventListener('click', () => {
+            this.runQuickTest();
+        });
+
+        document.getElementById('run-full-system-test')?.addEventListener('click', () => {
+            this.runFullSystemTest();
+        });
+
+        document.getElementById('clear-debug-output')?.addEventListener('click', () => {
+            this.clearDebugOutput();
+        });
+
+        // WebSocket再接続
+        document.getElementById('reconnect-websocket')?.addEventListener('click', () => {
+            this.reconnectWebSocket();
+        });
+    }
+
+    initDebugTools() {
+        this.debugLog('🔧 デバッグツール初期化中...');
+        this.debugLog('💻 管理画面からフロントエンドの機能をテストできます。');
+        this.debugLog('⚠️  これらの機能は開発・デバッグ専用です。');
+    }
+
+    debugLog(message, type = 'info') {
+        const output = document.getElementById('debug-output');
+        if (!output) return;
+
+        const timestamp = new Date().toLocaleString('ja-JP');
+        const logEntry = `[${timestamp}] ${message}\n`;
+        
+        output.textContent += logEntry;
+        output.scrollTop = output.scrollHeight;
+
+        // システムログにも記録
+        console.log(`[Admin Debug] ${message}`);
+    }
+
+    clearDebugOutput() {
+        const output = document.getElementById('debug-output');
+        if (output) {
+            output.textContent = '';
+        }
+    }
+
+    showDebugResult(elementId, message, type = 'info') {
+        const resultDiv = document.getElementById(elementId);
+        if (!resultDiv) return;
+
+        resultDiv.textContent = message;
+        resultDiv.className = `test-result ${type}`;
+        resultDiv.style.display = 'block';
+
+        // デバッグ出力にも追加
+        this.debugLog(`[${elementId}] ${message}`, type);
+    }
+
+    // フロントエンド接続テスト
+    async testFrontendConnection() {
+        this.debugLog('🌐 フロントエンド接続テスト開始...');
+        
+        try {
+            const response = await fetch('http://localhost:8080/', {
+                method: 'HEAD',
+                mode: 'no-cors'
+            });
+            
+            this.debugLog('✅ フロントエンドサーバーへの接続成功');
+            this.showDebugResult('frontend-test-result', 
+                '✅ フロントエンドサーバー接続成功\nURL: http://localhost:8080/', 'success');
+            
+        } catch (error) {
+            this.debugLog(`❌ フロントエンド接続失敗: ${error.message}`);
+            this.showDebugResult('frontend-test-result', 
+                `❌ フロントエンド接続失敗\nエラー: ${error.message}\n\n確認事項:\n- フロントエンドサーバーが起動しているか\n- ポート8080が使用可能か`, 'error');
+        }
+    }
+
+    async getFrontendStatus() {
+        this.debugLog('📊 フロントエンド状態取得中...');
+        
+        try {
+            // バックエンド経由でフロントエンドの状態を確認
+            const response = await fetch(`${this.apiBase}/system/frontend-status`, {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.debugLog('✅ フロントエンド状態取得成功');
+                this.showDebugResult('frontend-test-result', 
+                    `📊 フロントエンド状態:\n${JSON.stringify(data, null, 2)}`, 'success');
+            } else {
+                throw new Error('フロントエンド状態取得失敗');
+            }
+            
+        } catch (error) {
+            this.debugLog(`❌ フロントエンド状態取得失敗: ${error.message}`);
+            this.showDebugResult('frontend-test-result', 
+                `❌ フロントエンド状態取得失敗\nエラー: ${error.message}`, 'error');
+        }
+    }
+
+    // 感情分析デバッグ
+    analyzeEmotion() {
+        const text = document.getElementById('debug-emotion-text').value.trim();
+        
+        if (!text) {
+            this.showDebugResult('emotion-debug-result', 
+                '❌ テスト用テキストを入力してください', 'error');
+            return;
+        }
+
+        this.debugLog(`🧠 感情分析テスト: "${text}"`);
+        
+        // フロントエンドの感情分析を実行するコマンドを送信
+        this.executeOnFrontend(`
+            if (window.EmotionAnalyzer) {
+                const result = window.EmotionAnalyzer.directAnalyze('${text}');
+                console.log('感情分析結果:', result);
+                return result;
+            } else {
+                return { error: '感情分析エンジンが見つかりません' };
+            }
+        `).then(result => {
+            if (result.error) {
+                this.showDebugResult('emotion-debug-result', 
+                    `❌ ${result.error}`, 'error');
+            } else {
+                this.showDebugResult('emotion-debug-result', 
+                    `✅ 感情分析結果:\n感情: ${result.emotion}\n信頼度: ${result.confidence}\n詳細: ${JSON.stringify(result, null, 2)}`, 'success');
+            }
+        });
+    }
+
+    runEmotionTests() {
+        this.debugLog('🧪 感情分析テストスイート実行中...');
+        
+        const testCases = [
+            { text: '嬉しいです！とても幸せな気分です！', expected: 'happy' },
+            { text: 'えー！びっくりしました！', expected: 'surprised' },
+            { text: 'う～ん、考えてみましょう', expected: 'thinking' },
+            { text: '残念ですが、うまくいきませんでした', expected: 'sad' },
+            { text: 'それは許せません！怒ります！', expected: 'angry' }
+        ];
+
+        this.executeOnFrontend(`
+            if (window.EmotionAnalyzer) {
+                const testCases = ${JSON.stringify(testCases)};
+                const results = [];
+                
+                testCases.forEach(test => {
+                    const result = window.EmotionAnalyzer.directAnalyze(test.text);
+                    results.push({
+                        text: test.text,
+                        expected: test.expected,
+                        actual: result.emotion,
+                        confidence: result.confidence,
+                        success: result.emotion === test.expected
+                    });
+                });
+                
+                return results;
+            } else {
+                return { error: '感情分析エンジンが見つかりません' };
+            }
+        `).then(results => {
+            if (results.error) {
+                this.showDebugResult('emotion-debug-result', 
+                    `❌ ${results.error}`, 'error');
+            } else {
+                const successCount = results.filter(r => r.success).length;
+                const report = results.map(r => 
+                    `${r.success ? '✅' : '❌'} "${r.text}"\n   期待: ${r.expected}, 実際: ${r.actual} (信頼度: ${r.confidence})`
+                ).join('\n\n');
+                
+                this.showDebugResult('emotion-debug-result', 
+                    `🧪 感情分析テスト結果 (${successCount}/${results.length} 成功)\n\n${report}`, 
+                    successCount === results.length ? 'success' : 'warning');
+            }
+        });
+    }
+
+    checkEmotionKeywords() {
+        this.debugLog('📝 感情キーワード確認中...');
+        
+        this.executeOnFrontend(`
+            if (window.EmotionAnalyzer && window.EmotionAnalyzer.emotionKeywords) {
+                const keywords = window.EmotionAnalyzer.emotionKeywords;
+                const summary = {};
+                
+                for (const [emotion, data] of Object.entries(keywords)) {
+                    summary[emotion] = {
+                        count: data.keywords.length,
+                        samples: data.keywords.slice(0, 5)
+                    };
+                }
+                
+                return summary;
+            } else {
+                return { error: '感情キーワード辞書が見つかりません' };
+            }
+        `).then(result => {
+            if (result.error) {
+                this.showDebugResult('emotion-debug-result', 
+                    `❌ ${result.error}`, 'error');
+            } else {
+                const report = Object.entries(result).map(([emotion, data]) => 
+                    `${emotion}: ${data.count}個 (例: ${data.samples.join(', ')})`
+                ).join('\n');
+                
+                this.showDebugResult('emotion-debug-result', 
+                    `📝 感情キーワード辞書:\n\n${report}`, 'success');
+            }
+        });
+    }
+
+    // Live2Dデバッグ
+    checkLive2DStatus() {
+        this.debugLog('🎭 Live2D状態確認中...');
+        
+        this.executeOnFrontend(`
+            const status = {
+                Live2DController: !!window.Live2DController,
+                isAvailable: window.Live2DController ? window.Live2DController.isAvailable() : false,
+                currentModel: !!window.currentModel,
+                PIXI: !!window.PIXI,
+                app: !!window.app
+            };
+            
+            if (window.Live2DController && window.Live2DController.isAvailable()) {
+                status.currentExpression = window.Live2DController.getCurrentExpressionState();
+            }
+            
+            return status;
+        `).then(status => {
+            const report = Object.entries(status).map(([key, value]) => 
+                `${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`
+            ).join('\n');
+            
+            const isHealthy = status.Live2DController && status.isAvailable && status.currentModel;
+            
+            this.showDebugResult('live2d-debug-result', 
+                `🎭 Live2D システム状態:\n\n${report}`, 
+                isHealthy ? 'success' : 'warning');
+        });
+    }
+
+    testLive2DExpressions() {
+        this.debugLog('😊 Live2D表情テスト実行中...');
+        
+        const expressions = ['smile', 'surprised', 'sad', 'angry', 'normal'];
+        
+        this.executeOnFrontend(`
+            if (window.Live2DController && window.Live2DController.isAvailable()) {
+                const expressions = ${JSON.stringify(expressions)};
+                const results = [];
+                
+                expressions.forEach(expr => {
+                    try {
+                        window.Live2DController.setExpression(expr);
+                        results.push({ expression: expr, success: true });
+                    } catch (error) {
+                        results.push({ expression: expr, success: false, error: error.message });
+                    }
+                });
+                
+                return results;
+            } else {
+                return { error: 'Live2D Controller が利用できません' };
+            }
+        `).then(results => {
+            if (results.error) {
+                this.showDebugResult('live2d-debug-result', 
+                    `❌ ${results.error}`, 'error');
+            } else {
+                const report = results.map(r => 
+                    `${r.success ? '✅' : '❌'} ${r.expression}${r.error ? ` (${r.error})` : ''}`
+                ).join('\n');
+                
+                this.showDebugResult('live2d-debug-result', 
+                    `😊 Live2D表情テスト結果:\n\n${report}`, 'success');
+            }
+        });
+    }
+
+    testLive2DMotions() {
+        this.debugLog('💃 Live2Dモーションテスト実行中...');
+        
+        const motions = ['idle', 'tap', 'flick'];
+        
+        this.executeOnFrontend(`
+            if (window.Live2DController && window.Live2DController.isAvailable()) {
+                const motions = ${JSON.stringify(motions)};
+                const results = [];
+                
+                motions.forEach(motion => {
+                    try {
+                        window.Live2DController.startRandomMotion(motion);
+                        results.push({ motion: motion, success: true });
+                    } catch (error) {
+                        results.push({ motion: motion, success: false, error: error.message });
+                    }
+                });
+                
+                return results;
+            } else {
+                return { error: 'Live2D Controller が利用できません' };
+            }
+        `).then(results => {
+            if (results.error) {
+                this.showDebugResult('live2d-debug-result', 
+                    `❌ ${results.error}`, 'error');
+            } else {
+                const report = results.map(r => 
+                    `${r.success ? '✅' : '❌'} ${r.motion}${r.error ? ` (${r.error})` : ''}`
+                ).join('\n');
+                
+                this.showDebugResult('live2d-debug-result', 
+                    `💃 Live2Dモーションテスト結果:\n\n${report}`, 'success');
+            }
+        });
+    }
+
+    // システム統合テスト
+    runQuickTest() {
+        this.debugLog('⚡ クイックシステムテスト実行中...');
+        
+        // 簡単なシステムチェックを実行
+        Promise.all([
+            this.testBackendHealth(),
+            this.testFrontendConnection(),
+            this.checkSystemComponents()
+        ]).then(() => {
+            this.debugLog('✅ クイックテスト完了');
+        }).catch(error => {
+            this.debugLog(`❌ クイックテストエラー: ${error.message}`);
+        });
+    }
+
+    async runFullSystemTest() {
+        this.debugLog('🏁 完全システムテスト開始...');
+        
+        try {
+            // 1. バックエンド接続確認
+            await this.testBackendHealth();
+            
+            // 2. フロントエンド接続確認
+            await this.testFrontendConnection();
+            
+            // 3. システムコンポーネント確認
+            await this.checkSystemComponents();
+            
+            // 4. 感情分析テスト
+            this.runEmotionTests();
+            
+            // 5. Live2D状態確認
+            this.checkLive2DStatus();
+            
+            this.debugLog('🎉 完全システムテスト完了');
+            this.showDebugResult('system-test-result', 
+                '🎉 完全システムテスト完了\n全てのコンポーネントをチェックしました。', 'success');
+                
+        } catch (error) {
+            this.debugLog(`❌ システムテストエラー: ${error.message}`);
+            this.showDebugResult('system-test-result', 
+                `❌ システムテストエラー: ${error.message}`, 'error');
+        }
+    }
+
+    async testBackendHealth() {
+        const response = await fetch(`${this.apiBase}/health`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('バックエンドヘルスチェック失敗');
+        }
+        
+        this.debugLog('✅ バックエンド接続正常');
+        return true;
+    }
+
+    async checkSystemComponents() {
+        this.debugLog('🔍 システムコンポーネント確認中...');
+        
+        const components = {
+            frontend: 'http://localhost:8080',
+            backend: 'http://localhost:3001',
+            admin: 'http://localhost:8081'
+        };
+        
+        const results = {};
+        
+        for (const [name, url] of Object.entries(components)) {
+            try {
+                const response = await fetch(url, { 
+                    method: 'HEAD', 
+                    mode: 'no-cors',
+                    cache: 'no-cache'
+                });
+                results[name] = 'OK';
+            } catch (error) {
+                results[name] = 'ERROR';
+            }
+        }
+        
+        const report = Object.entries(results).map(([name, status]) => 
+            `${status === 'OK' ? '✅' : '❌'} ${name}: ${status}`
+        ).join('\n');
+        
+        this.showDebugResult('system-test-result', 
+            `🔍 システムコンポーネント状態:\n\n${report}`, 'info');
+        
+        this.debugLog('✅ システムコンポーネント確認完了');
+    }
+
+    // フロントエンドでコードを実行するヘルパー関数
+    async executeOnFrontend(code) {
+        try {
+            // WebSocket接続が利用可能な場合は使用
+            if (window.adminWsClient && window.adminWsClient.isConnected()) {
+                this.debugLog('🔌 WebSocket経由でフロントエンドにコマンド送信中...');
+                return await window.adminWsClient.executeOnFrontend(code);
+            } else {
+                // WebSocketが利用できない場合はHTTP APIを使用（レガシー）
+                this.debugLog('📡 HTTP API経由でフロントエンドコマンド送信中...');
+                
+                const response = await fetch(`${this.apiBase}/system/execute-frontend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ command: code })
+                });
+
+                if (!response.ok) {
+                    throw new Error('HTTP API経由のコマンド送信に失敗しました');
+                }
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'コマンド実行に失敗しました');
+                }
+
+                // HTTP API経由の場合は制限された結果を返す
+                return { 
+                    note: 'HTTP API経由で送信されました。リアルタイム実行結果はWebSocket接続時に利用可能です。',
+                    requestId: data.requestId,
+                    command: code
+                };
+            }
+        } catch (error) {
+            this.debugLog(`❌ フロントエンド実行エラー: ${error.message}`);
+            return { error: error.message };
+        }
+    }
+
+    // WebSocket再接続
+    reconnectWebSocket() {
+        this.debugLog('🔄 WebSocket再接続を開始中...');
+        
+        if (window.adminWsClient) {
+            try {
+                // WebSocketクライアントの再接続メソッドを呼び出し
+                window.adminWsClient.reconnect();
+                this.debugLog('✅ WebSocket再接続コマンド送信完了');
+                
+                // 接続状況の更新タイマーを設定
+                setTimeout(() => {
+                    if (window.adminWsClient.isConnected()) {
+                        this.debugLog('🎉 WebSocket再接続成功！');
+                        this.showDebugResult('websocket-reconnect-result', 
+                            '✅ WebSocket再接続成功\n管理画面とフロントエンド間のリアルタイム通信が復旧しました。', 'success');
+                    } else {
+                        this.debugLog('⚠️ WebSocket再接続は処理中です...');
+                        this.showDebugResult('websocket-reconnect-result', 
+                            '⚠️ WebSocket再接続中...\n接続完了まで少々お待ちください。', 'warning');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                this.debugLog(`❌ WebSocket再接続エラー: ${error.message}`);
+                this.showDebugResult('websocket-reconnect-result', 
+                    `❌ WebSocket再接続失敗\nエラー: ${error.message}`, 'error');
+            }
+        } else {
+            this.debugLog('❌ WebSocketクライアントが見つかりません');
+            this.showDebugResult('websocket-reconnect-result', 
+                '❌ WebSocketクライアントが初期化されていません\nページをリロードしてください。', 'error');
         }
     }
 }

@@ -1,0 +1,29 @@
+
+> chatbot-sage-backend@1.0.0 start
+> node app.js
+
+✅ Auth routes loaded
+✅ YouTube routes loaded
+✅ Config routes loaded
+✅ Logs routes loaded
+✅ Debug routes loaded
+🚀 ChatBot Sage Backend Server started on port 3001
+📊 Environment: development
+🔗 Frontend URL: http://localhost:8080
+⚙️ Admin URL: http://localhost:8081
+🔌 WebSocket サーバー初期化完了
+✅ 管理者ログイン成功: admin at 2025-06-11T08:32:48.750Z
+🔗 クライアント接続: stwXxLqzu6ohAiZpAAAB
+⚙️ 管理画面クライアント登録: stwXxLqzu6ohAiZpAAAB
+🔐 管理画面認証完了: stwXxLqzu6ohAiZpAAAB
+🔌 クライアント切断: stwXxLqzu6ohAiZpAAAB
+🔗 クライアント接続: gd_qQNtMThzC6nQzAAAD
+⚙️ 管理画面クライアント登録: gd_qQNtMThzC6nQzAAAD
+🔐 管理画面認証完了: gd_qQNtMThzC6nQzAAAD
+✅ 管理者ログイン成功: admin at 2025-06-11T08:34:32.177Z
+🔌 クライアント切断: gd_qQNtMThzC6nQzAAAD
+🔗 クライアント接続: v7nyHxW3scZt6UpRAAAF
+📱 フロントエンドクライアント登録: v7nyHxW3scZt6UpRAAAF
+🔌 クライアント切断: v7nyHxW3scZt6UpRAAAF
+🔗 クライアント接続: sLjIOW3rZWBoOhm6AAAH
+📱 フロントエンドクライアント登録: sLjIOW3rZWBoOhm6AAAH

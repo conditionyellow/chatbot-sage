@@ -35,7 +35,7 @@ chatbot_sage/
 │   ├── models/                      # Live2Dモデル
 │   └── libs/                        # ライブラリ
 ├── admin/                           # 管理者専用（認証必須）
-│   ├── admin.html                   # 管理画面
+│   ├── index.html                   # 管理画面（セキュリティ向上のためadmin.htmlから変更）
 │   ├── admin-style.css              # 管理画面専用スタイル
 │   ├── admin-script.js              # 管理画面ロジック
 │   └── auth.js                      # 認証処理

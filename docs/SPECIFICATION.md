@@ -5,11 +5,12 @@
 本アプリケーションは、Google Cloud Run上にデプロイされたサーバーを経由してGemini APIと連携し、Live2Dキャラクター（Natori）が応答するWebチャットボットです。
 
 ### バージョン情報
-- **アプリケーション名**: Gemini Chatbot with Live2D (Natori Edition) - YouTube Live Chat Integration
-- **バージョン**: 3.0.0 (Major Update)
+- **アプリケーション名**: Gemini Chatbot with Live2D (Natori Edition) - WebSocket Debug System
+- **バージョン**: 3.1.0 (WebSocket Integration Update)
 - **作成日**: 2025年6月2日
-- **最終更新**: 2025年6月11日（セキュリティアーキテクチャ分離とYouTubeライブチャット統合完了）
-- **動作確認済み**: 2025年6月11日（完全統合システムの実動作テスト成功）
+- **最終更新**: 2025年6月11日（WebSocketベースリアルタイムデバッグシステム実装完了）
+- **動作確認済み**: 2025年6月11日（WebSocket通信・デバッグ機能統合テスト成功）
+- **テスト状況**: ✅ 全サーバー起動確認、✅ WebSocket双方向通信、✅ リアルタイムデバッグ実行
 
 ---
 
@@ -44,6 +45,7 @@
 - **フロントエンド**: HTML5, CSS3, Vanilla JavaScript, PIXI.js v7.2.4
 - **バックエンド**: 
   - Express.js (Node.js)
+  - Socket.IO v4.8.1 (WebSocket通信)
   - YouTube Data API v3 クライアント
   - bcrypt (パスワードハッシュ)
   - Session認証
@@ -57,7 +59,7 @@
   - Web Speech API (SpeechSynthesis) - ブラウザ内蔵
   - Google Cloud Text-to-Speech API - クラウドベース高品質音声
   - AivisSpeech Engine - ローカル高品質日本語音声合成
-- **通信**: Fetch API, REST API, WebSocket (将来拡張)
+- **通信**: Fetch API, REST API, WebSocket (リアルタイム双方向通信)
 
 ---
 
@@ -71,6 +73,7 @@ chatbot_sage/
 │   ├── style.css                   # フロントエンドスタイル
 │   ├── script.js                   # メインアプリケーションロジック
 │   ├── backend-client.js           # バックエンド通信クライアント
+│   ├── debug-websocket.js          # フロントエンドWebSocketクライアント
 │   ├── live2d-pixi.js             # Live2D PIXI統合コントローラー
 │   ├── emotion-analyzer-v2.js      # 感情分析エンジン（v2）
 │   ├── natori-personality.js       # Natori性格システム
@@ -82,6 +85,7 @@ chatbot_sage/
 │       └── CubismSdkForWeb-5-r.4/ # Cubism SDK v5
 ├── server/                         # バックエンドAPI（セキュアサーバー）
 │   ├── app.js                     # Express.jsメインアプリケーション
+│   ├── websocket.js               # WebSocketサーバー管理
 │   ├── package.json               # Node.js依存関係
 │   ├── .env                       # 環境変数（APIキー等）
 │   ├── middleware/                # Express.jsミドルウェア
@@ -89,6 +93,7 @@ chatbot_sage/
 │   ├── routes/                    # APIルート
 │   │   ├── auth.js               # 認証API
 │   │   ├── config.js             # 設定管理API
+│   │   ├── debug.js              # デバッグAPI（WebSocket対応）
 │   │   ├── youtube.js            # YouTube監視API
 │   │   └── logs.js               # ログ管理API
 │   ├── services/                  # ビジネスロジック
@@ -98,9 +103,10 @@ chatbot_sage/
 │       ├── config.json           # 設定データ
 │       └── logs.json             # システムログ
 ├── admin/                          # 管理パネル（認証保護）
-│   ├── admin.html                 # 管理画面HTML
+│   ├── index.html                # 管理画面HTML（セキュリティ向上のためadmin.htmlから変更）
 │   ├── admin-style.css           # 管理画面スタイル
-│   └── admin-script.js           # 管理画面ロジック
+│   ├── admin-script.js           # 管理画面ロジック
+│   └── admin-websocket.js        # 管理画面WebSocketクライアント
 ├── docs/                          # ドキュメント
 │   ├── SPECIFICATION.md          # 本仕様書
 │   ├── ARCHITECTURE_SEPARATION_PLAN.md # アーキテクチャ分離計画
@@ -120,6 +126,11 @@ chatbot_sage/
 - **認証保護**: 管理画面はbcryptハッシュ認証で保護
 - **最小権限原則**: 各コンポーネントは必要最小限の権限のみ
 - **ログ監視**: 全API呼び出しとエラーを記録
+- **ファイル隠蔽**: 管理画面をindex.htmlに変更してディレクトリブラウジングを防止
+- **ポート分離**: 管理機能を専用ポート（8081）で分離
+- **WebSocket認証**: 管理画面のみがフロントエンドにコマンド送信可能
+- **コマンド実行制限**: localhostアクセスのみでeval実行を制限
+- **タイムアウト制御**: WebSocketコマンド実行時間を30秒で制限
 
 ---
 
@@ -227,6 +238,21 @@ chatbot_sage/
 - **ログ表示**: 時系列表示、フィルタリング
 - **リアルタイム更新**: 自動リフレッシュ
 - **ログクリア**: 一括削除機能
+
+#### 3.6 WebSocketデバッグ機能（NEW）
+- **リアルタイム通信**: 管理画面からフロントエンドへのWebSocket接続
+- **接続状況表示**: リアルタイムWebSocket接続状態監視
+- **フロントエンドクライアント数**: 接続中クライアント数の表示
+- **デバッグコマンド実行**: 
+  - フロントエンド機能のリアルタイムテスト
+  - Live2D表情・モーション制御
+  - 感情分析エンジンテスト
+  - システムコンポーネント確認
+- **実行結果表示**: コマンド実行結果のリアルタイム表示
+- **WebSocket再接続**: 接続障害時の手動再接続機能
+- **HTTPフォールバック**: WebSocket利用不可時の自動HTTP API使用
+- **セキュリティ**: 認証済み管理画面のみからのコマンド送信
+- **タイムアウト制御**: 30秒でのコマンド実行タイムアウト
   - Enterキー押下
 - **メッセージ表示**: 
   - ユーザーメッセージ（右寄せ、青背景）
@@ -396,6 +422,185 @@ chatbot_sage/
 
 ---
 
+## アプリケーション起動方法
+
+### 1. 前提条件
+
+#### 1.1 必要なソフトウェア
+- **Node.js**: v16.0.0以上（推奨: v18.0.0以上）
+- **Python 3**: 3.8以上（フロントエンド・管理画面サーバー用）
+- **Webブラウザ**: Chrome 90+, Firefox 88+, Safari 14+（WebGL対応必須）
+
+#### 1.2 必要なAPIキー（オプション）
+- **Google Gemini API**: Cloud Run proxy経由でのAI応答
+- **YouTube Data API v3**: ライブチャット監視機能（管理画面設定）
+- **Google Cloud TTS API**: 高品質音声合成（オプション）
+
+### 2. セットアップ手順
+
+#### 2.1 リポジトリのクローンまたはダウンロード
+```bash
+# Gitでクローンする場合
+git clone [repository-url] chatbot-sage
+cd chatbot-sage
+
+# または、ZIPファイルをダウンロードして展開
+```
+
+#### 2.2 依存関係のインストール
+```bash
+# プロジェクトルートで実行
+npm install
+```
+
+#### 2.3 環境設定（オプション）
+```bash
+# server/.envファイルを作成（YouTube API使用時）
+cp server/.env.example server/.env
+# .envファイルを編集してAPIキーを設定
+```
+
+### 3. アプリケーション起動
+
+#### 3.1 自動起動（推奨）
+**Windows:**
+```cmd
+start.bat
+```
+
+**macOS/Linux:**
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+**自動停止（macOS/Linux）:**
+```bash
+./stop.sh
+```
+
+#### 3.2 スクリプト機能
+- **自動依存関係インストール**: 初回起動時の`npm install`
+- **ポート競合解決**: 既存プロセスの自動停止
+- **起動確認**: 各サーバーの正常起動チェック
+- **ログ管理**: 起動ログの自動保存（macOS/Linux）
+- **色付き出力**: 状況に応じたカラフルなメッセージ
+- **PID管理**: 停止用のプロセスID保存（macOS/Linux）
+
+#### 3.2 手動起動
+
+**ターミナル1: バックエンドサーバー起動**
+```bash
+# プロジェクトルートで実行
+npm start
+
+# または開発モード（nodemon使用）
+npm run dev
+```
+
+**ターミナル2: フロントエンドサーバー起動**
+```bash
+# 新しいターミナルでプロジェクトルートから実行
+python3 -m http.server 8080 --directory public
+
+# または、Pythonが古い場合
+python -m SimpleHTTPServer 8080
+```
+
+**ターミナル3: 管理画面サーバー起動**
+```bash
+# 新しいターミナルでプロジェクトルートから実行
+python3 -m http.server 8081 --directory admin
+```
+
+### 4. アクセス方法
+
+#### 4.1 各サービスのURL
+- **フロントエンド（チャットボット）**: http://localhost:8080
+- **管理画面**: http://localhost:8081
+- **バックエンドAPI**: http://localhost:3001
+
+#### 4.2 管理画面ログイン
+- **URL**: http://localhost:8081
+- **ユーザー名**: `admin`
+- **パスワード**: `chloe2025`
+
+### 5. 動作確認
+
+#### 5.1 正常起動の確認
+1. **バックエンドサーバー**: ターミナルに以下が表示される
+   ```
+   🚀 ChatBot Sage Backend Server started on port 3001
+   🔌 WebSocket サーバー初期化完了
+   ```
+
+2. **フロントエンドアクセス**: http://localhost:8080 でNatoriキャラクターとチャット画面が表示
+
+3. **管理画面アクセス**: http://localhost:8081 でログイン画面が表示
+
+#### 5.2 WebSocket接続確認
+- 管理画面のデバッグタブで「🔌 WebSocket接続状況」が「接続済み」と表示
+- フロントエンドクライアント数が「1台」と表示される
+
+#### 5.3 基本機能テスト
+- **チャット機能**: フロントエンドでメッセージ送信・AI応答
+- **Live2D表示**: Natoriキャラクターの表情・モーション
+- **音声合成**: 🎵ボタンで音声エンジン切り替え
+- **リアルタイムデバッグ**: 管理画面からフロントエンド機能テスト
+
+### 6. トラブルシューティング
+
+#### 6.1 ポート競合エラー
+```bash
+# 使用中のポートを確認
+lsof -i :3001
+lsof -i :8080
+lsof -i :8081
+
+# プロセスを停止
+kill [PID]
+```
+
+#### 6.2 依存関係エラー
+```bash
+# node_modulesを削除して再インストール
+rm -rf node_modules package-lock.json
+npm install
+```
+
+#### 6.3 WebSocket接続エラー
+- 管理画面の「🔄 再接続」ボタンをクリック
+- ブラウザのキャッシュをクリア
+- バックエンドサーバーを再起動
+
+#### 6.4 Live2D表示エラー
+- ブラウザがWebGLをサポートしているか確認
+- ハードウェアアクセラレーションが有効か確認
+- コンソールエラーログを確認
+
+### 7. 開発者向け情報
+
+#### 7.1 デバッグモード
+```bash
+# バックエンドを開発モードで起動
+npm run dev
+
+# ログレベルを設定
+DEBUG=* npm start
+```
+
+#### 7.2 設定ファイル
+- **バックエンド設定**: `server/data/config.json`
+- **システムログ**: `server/data/logs.json`
+- **フロントエンド設定**: LocalStorage（ブラウザ）
+
+#### 7.3 主要ファイル
+- **フロントエンド**: `public/script.js`, `public/live2d-pixi.js`
+- **バックエンド**: `server/app.js`, `server/websocket.js`
+- **管理画面**: `admin/admin-script.js`, `admin/admin-websocket.js`
+
+---
+
 ## API仕様
 
 ### 1. バックエンドAPI（localhost:3001）
@@ -511,3 +716,295 @@ chatbot_sage/
 ```
 
 #### 設定管理API
+
+##### GET /api/config
+設定取得（認証必須）
+
+**レスポンス**
+```json
+{
+  "success": true,
+  "config": {
+    "youtubeSettings": {
+      "apiKey": "AIzaSy...",
+      "videoId": "dQw4w9WgXcQ",
+      "checkInterval": 10
+    },
+    "systemSettings": {
+      "enableLogging": true,
+      "logLevel": "info",
+      "maxLogEntries": 1000
+    }
+  }
+}
+```
+
+##### POST /api/config
+設定保存（認証必須）
+
+**リクエストボディ**
+```json
+{
+  "youtubeSettings": {
+    "apiKey": "AIzaSy...",
+    "videoId": "dQw4w9WgXcQ",
+    "checkInterval": 10
+  },
+  "systemSettings": {
+    "enableLogging": true,
+    "logLevel": "info",
+    "maxLogEntries": 1000
+  }
+}
+```
+
+#### デバッグAPI（WebSocket対応）
+
+##### GET /api/system/frontend-status
+フロントエンド状態取得（認証必須）
+
+**レスポンス**
+```json
+{
+  "success": true,
+  "status": {
+    "url": "http://localhost:8080",
+    "timestamp": "2025-06-11T12:34:56Z",
+    "websocket": {
+      "enabled": true,
+      "connections": {
+        "frontendClients": [
+          {
+            "id": "Jy3soVR5Y_QYF6t-AAAD",
+            "origin": "http://localhost:8080",
+            "connected": true
+          }
+        ],
+        "adminClients": [
+          {
+            "id": "WkODCULXEbVke-6PAAAB",
+            "origin": "http://localhost:8081",
+            "connected": true,
+            "authenticated": true
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+##### POST /api/system/execute-frontend
+フロントエンドコマンド実行（認証必須）
+
+**リクエストボディ**
+```json
+{
+  "command": "window.live2dApp ? 'Live2D loaded' : 'Live2D not found'"
+}
+```
+
+**レスポンス（WebSocket利用可能時）**
+```json
+{
+  "success": true,
+  "message": "WebSocket経由でコマンドを送信しました",
+  "requestId": "req_1704963296123_abc123def",
+  "websocketUsed": true
+}
+```
+
+**レスポンス（WebSocket利用不可時）**
+```json
+{
+  "success": true,
+  "message": "HTTP API経由でコマンドを送信しました",
+  "requestId": "req_1704963296123_xyz789abc",
+  "websocketUsed": false
+}
+```
+
+### 2. WebSocket通信仕様
+
+#### 2.1 接続・認証
+- **接続URL**: `ws://localhost:3001`
+- **ライブラリ**: Socket.IO v4.8.1
+- **クライアント種別**: 
+  - `frontend`: フロントエンドクライアント
+  - `admin`: 管理画面クライアント（認証必須）
+
+#### 2.2 管理画面からフロントエンドへのコマンド送信
+```javascript
+// 管理画面側
+socket.emit('execute_frontend_command', {
+  command: 'console.log("Hello from admin")',
+  targetClient: 'all', // または特定のクライアントID
+  requestId: 'req_1704963296123_abc123def',
+  timestamp: '2025-06-11T12:34:56Z'
+});
+```
+
+#### 2.3 フロントエンドからの実行結果返信
+```javascript
+// フロントエンド側
+socket.emit('command_result', {
+  result: 'Hello from admin',
+  requestId: 'req_1704963296123_abc123def',
+  adminClientId: 'WkODCULXEbVke-6PAAAB',
+  success: true
+});
+```
+
+#### 2.4 リアルタイム状態通知
+```javascript
+// フロントエンド側
+socket.emit('frontend_status_update', {
+  components: {
+    live2d: { exists: true, available: true },
+    emotionAnalyzer: { exists: true, available: true },
+    speechSynthesis: { exists: true, available: true }
+  },
+  timestamp: new Date()
+});
+```
+
+---
+
+## セキュリティ仕様
+
+### 1. 認証・認可
+
+#### 1.1 管理画面認証
+- **認証方式**: Express-session + bcryptハッシュ
+- **デフォルト認証情報**:
+  - ユーザー名: `admin`
+  - パスワード: `chloe2025`
+- **セッション管理**: HTTPOnly Cookie、セッションタイムアウト
+
+#### 1.2 WebSocket認証
+- **管理画面のみ**: フロントエンドへのコマンド送信権限
+- **段階的認証**: HTTP認証 → WebSocket認証
+- **クライアント種別管理**: admin/frontend の明確な分離
+
+### 2. 実行制限
+
+#### 2.1 コマンド実行制限
+- **localhost制限**: 127.0.0.1からのアクセスのみ
+- **eval制限**: 管理画面認証済みクライアントのみ
+- **タイムアウト**: 30秒でのコマンド実行制限
+- **サンドボックス**: フロントエンドブラウザ環境内のみ
+
+#### 2.2 APIアクセス制限
+- **CORS設定**: 指定オリジンのみ許可
+- **Rate Limiting**: API呼び出し頻度制限
+- **ポート分離**: 管理機能の専用ポート（8081）
+
+### 3. データ保護
+
+#### 3.1 APIキー管理
+- **分離原則**: フロントエンドからAPIキー完全除去
+- **暗号化保存**: bcryptによるパスワードハッシュ
+- **環境変数**: .envファイルでの機密情報管理
+
+#### 3.2 ログ管理
+- **アクセスログ**: 全API呼び出しの記録
+- **エラーログ**: セキュリティ関連エラーの詳細記録
+- **ローテーション**: ログサイズ制限（最大1000件）
+
+---
+
+## 運用・保守
+
+### 1. モニタリング
+
+#### 1.1 システム監視
+- **リアルタイム状況**: 管理画面ダッシュボード
+- **WebSocket接続**: 接続クライアント数・状態
+- **パフォーマンス**: CPU、メモリ使用量（プロセス監視）
+
+#### 1.2 ログ監視
+- **レベル別表示**: info, warning, error, debug
+- **リアルタイム更新**: 自動リフレッシュ機能
+- **検索・フィルタ**: 時系列・レベル別検索
+
+### 2. バックアップ・復旧
+
+#### 2.1 設定バックアップ
+- **設定ファイル**: `server/data/config.json`
+- **ログファイル**: `server/data/logs.json`
+- **手動バックアップ**: 管理画面からの設定エクスポート
+
+#### 2.2 障害復旧
+- **自動再起動**: スクリプトによる自動プロセス管理
+- **WebSocket再接続**: 接続障害時の自動・手動再接続
+- **フォールバック**: WebSocket → HTTP APIの自動切り替え
+
+### 3. アップデート・拡張
+
+#### 3.1 バージョン管理
+- **セマンティックバージョニング**: Major.Minor.Patch
+- **変更履歴**: SPECIFICATION.md内でのバージョン記録
+- **互換性**: 後方互換性の維持
+
+#### 3.2 拡張ポイント
+- **プラグインアーキテクチャ**: 新機能の容易な追加
+- **APIエンドポイント**: RESTful設計での機能拡張
+- **WebSocket イベント**: 新しいリアルタイム機能の追加
+
+---
+
+## 付録
+
+### A. ファイル関係図
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           ChatBot Sage Architecture                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────┐    WebSocket    ┌─────────────────┐               │
+│  │   Admin Panel   │◄──────────────►│   Backend API   │               │
+│  │  (port 8081)    │      HTTP       │  (port 3001)    │               │
+│  └─────────────────┘◄──────────────►└─────────────────┘               │
+│           │                                    │                        │
+│           │                                    │ HTTP                   │
+│           │                                    ▼                        │
+│           │                          ┌─────────────────┐               │
+│           │                          │ Public Frontend │               │
+│           │                          │  (port 8080)    │               │
+│           │                          └─────────────────┘               │
+│           │                                    │                        │
+│           │                                    │ WebSocket              │
+│           │                                    ▼                        │
+│           │                          ┌─────────────────┐               │
+│           └─────────────────────────►│ Debug Commands  │               │
+│                                      │ Live2D Control  │               │
+│                                      │ Emotion Analysis│               │
+│                                      └─────────────────┘               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### B. 技術選定理由
+
+| 技術 | 選定理由 |
+|------|----------|
+| **Socket.IO** | 安定したWebSocket通信、自動フォールバック機能 |
+| **Express.js** | 軽量、高速、豊富なミドルウェア |
+| **PIXI.js** | WebGL対応、Live2D表示の最適化 |
+| **bcrypt** | 業界標準のパスワードハッシュ化 |
+| **Vanilla JS** | 軽量、依存関係最小化、学習コスト低 |
+
+### C. パフォーマンス指標
+
+| 項目 | 目標値 | 測定方法 |
+|------|--------|----------|
+| **初期読み込み** | < 3秒 | ブラウザDevTools |
+| **WebSocket接続** | < 1秒 | 管理画面接続ログ |
+| **Live2D表示** | 60fps | PIXI.js統計情報 |
+| **メモリ使用量** | < 200MB | ブラウザタスクマネージャ |
+
+---
+
+**最終更新**: 2025年6月11日
+**バージョン**: 3.1.0 (WebSocket Integration Update)
+**ドキュメント管理者**: Chloe (AI Assistant)

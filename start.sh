@@ -1,64 +1,120 @@
 #!/bin/bash
 
-# Chatbot Sage - 起動スクリプト
-# 3つのサーバーを同時に起動します
+# ChatBot Sage 起動スクリプト (macOS/Linux)
+# このスクリプトは3つのサーバーを自動的に起動します
 
-echo "🚀 Chatbot Sage 起動中..."
-echo ""
+echo "🚀 ChatBot Sage 起動中..."
+echo "=============================="
 
-# カレントディレクトリをスクリプトの場所に設定
+# 色付きテキスト用の定数
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# プロジェクトルートに移動
 cd "$(dirname "$0")"
 
-# バックエンドサーバー起動
-echo "📡 バックエンドAPI起動中... (port 3001)"
-cd server
-npm install > /dev/null 2>&1
-npm start &
-BACKEND_PID=$!
-cd ..
+# 依存関係の確認
+if [ ! -d "node_modules" ]; then
+    echo -e "${YELLOW}📦 依存関係をインストール中...${NC}"
+    npm install
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ npm install に失敗しました${NC}"
+        exit 1
+    fi
+fi
 
-# 少し待機
+# 既存のプロセスをチェック・停止
+echo -e "${YELLOW}🔍 既存のプロセスをチェック中...${NC}"
+
+# ポート3001をチェック
+PORT_3001=$(lsof -ti:3001)
+if [ ! -z "$PORT_3001" ]; then
+    echo -e "${YELLOW}⚠️  ポート3001が使用中です。プロセスを停止します...${NC}"
+    kill $PORT_3001 2>/dev/null
+    sleep 2
+fi
+
+# ポート8080をチェック
+PORT_8080=$(lsof -ti:8080)
+if [ ! -z "$PORT_8080" ]; then
+    echo -e "${YELLOW}⚠️  ポート8080が使用中です。プロセスを停止します...${NC}"
+    kill $PORT_8080 2>/dev/null
+    sleep 2
+fi
+
+# ポート8081をチェック
+PORT_8081=$(lsof -ti:8081)
+if [ ! -z "$PORT_8081" ]; then
+    echo -e "${YELLOW}⚠️  ポート8081が使用中です。プロセスを停止します...${NC}"
+    kill $PORT_8081 2>/dev/null
+    sleep 2
+fi
+
+# バックエンドサーバー起動
+echo -e "${BLUE}🔧 バックエンドサーバーを起動中...${NC}"
+npm start > backend.log 2>&1 &
+BACKEND_PID=$!
 sleep 3
 
-# フロントエンド起動
-echo "🎭 フロントエンド起動中... (port 8080)"
-cd public
-python3 -m http.server 8080 > /dev/null 2>&1 &
+# バックエンドの起動確認
+if ps -p $BACKEND_PID > /dev/null; then
+    echo -e "${GREEN}✅ バックエンドサーバー起動完了 (PID: $BACKEND_PID)${NC}"
+else
+    echo -e "${RED}❌ バックエンドサーバーの起動に失敗しました${NC}"
+    echo "ログを確認してください: cat backend.log"
+    exit 1
+fi
+
+# フロントエンドサーバー起動
+echo -e "${BLUE}🎨 フロントエンドサーバーを起動中...${NC}"
+python3 -m http.server 8080 --directory public > frontend.log 2>&1 &
 FRONTEND_PID=$!
-cd ..
+sleep 2
 
-# 管理画面起動
-echo "⚙️ 管理画面起動中... (port 8081)"
-cd admin
-python3 -m http.server 8081 > /dev/null 2>&1 &
+# フロントエンドの起動確認
+if ps -p $FRONTEND_PID > /dev/null; then
+    echo -e "${GREEN}✅ フロントエンドサーバー起動完了 (PID: $FRONTEND_PID)${NC}"
+else
+    echo -e "${RED}❌ フロントエンドサーバーの起動に失敗しました${NC}"
+    echo "ログを確認してください: cat frontend.log"
+    exit 1
+fi
+
+# 管理画面サーバー起動
+echo -e "${BLUE}⚙️  管理画面サーバーを起動中...${NC}"
+python3 -m http.server 8081 --directory admin > admin.log 2>&1 &
 ADMIN_PID=$!
-cd ..
+sleep 2
+
+# 管理画面の起動確認
+if ps -p $ADMIN_PID > /dev/null; then
+    echo -e "${GREEN}✅ 管理画面サーバー起動完了 (PID: $ADMIN_PID)${NC}"
+else
+    echo -e "${RED}❌ 管理画面サーバーの起動に失敗しました${NC}"
+    echo "ログを確認してください: cat admin.log"
+    exit 1
+fi
+
+# PIDファイルを保存（停止用）
+echo "$BACKEND_PID" > .pids
+echo "$FRONTEND_PID" >> .pids
+echo "$ADMIN_PID" >> .pids
 
 echo ""
-echo "✅ 起動完了！"
+echo -e "${GREEN}🎉 ChatBot Sage の起動が完了しました！${NC}"
+echo "=============================="
+echo -e "${BLUE}📱 フロントエンド:${NC} http://localhost:8080"
+echo -e "${BLUE}⚙️  管理画面:${NC}     http://localhost:8081"
+echo -e "${BLUE}🔧 バックエンドAPI:${NC} http://localhost:3001"
 echo ""
-echo "📱 アクセスURL:"
-echo "   フロントエンド: http://localhost:8080"
-echo "   管理画面:       http://localhost:8081/admin.html"
-echo "   バックエンドAPI: http://localhost:3001"
+echo -e "${YELLOW}管理画面ログイン情報:${NC}"
+echo "ユーザー名: admin"
+echo "パスワード: chloe2025"
 echo ""
-echo "🔑 管理画面ログイン情報:"
-echo "   ユーザー名: admin"
-echo "   パスワード: chloe2025"
+echo -e "${YELLOW}💡 停止するには:${NC} ./stop.sh を実行してください"
 echo ""
-echo "⏹️ 停止する場合は Ctrl+C を押してください"
+echo -e "${GREEN}ブラウザでアクセスして楽しんでください！${NC}"
 
-# プロセス終了時の処理
-cleanup() {
-    echo ""
-    echo "🛑 サーバーを停止中..."
-    kill $BACKEND_PID $FRONTEND_PID $ADMIN_PID 2>/dev/null
-    echo "✅ 全サーバーが停止されました"
-    exit 0
-}
-
-# シグナルハンドラー設定
-trap cleanup SIGINT SIGTERM
-
-# サーバーが動作中は待機
-wait

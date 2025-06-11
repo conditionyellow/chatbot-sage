@@ -3,9 +3,14 @@ const cors = require('cors');
 const session = require('express-session');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+const http = require('http');
+const path = require('path');
+
+// 正しいパスで .env ファイルを読み込み
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
@@ -85,11 +90,20 @@ try {
     console.error('❌ Failed to load logs routes:', error.message);
 }
 
+let debugRoutes = null;
+try {
+    debugRoutes = require('./routes/debug');
+    console.log('✅ Debug routes loaded');
+} catch (error) {
+    console.error('❌ Failed to load debug routes:', error.message);
+}
+
 // API Routes
 if (authRoutes) app.use('/api/auth', authRoutes);
 if (youtubeRoutes) app.use('/api/youtube', youtubeRoutes);
 if (configRoutes) app.use('/api/config', configRoutes);
 if (logsRoutes) app.use('/api/logs', logsRoutes);
+if (debugRoutes) app.use('/api/system', debugRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -118,12 +132,19 @@ app.use('*', (req, res) => {
     });
 });
 
+// WebSocket manager initialization
+const WebSocketManager = require('./websocket');
+let wsManager = null;
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🚀 ChatBot Sage Backend Server started on port ${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:8080'}`);
     console.log(`⚙️ Admin URL: ${process.env.ADMIN_URL || 'http://localhost:8081'}`);
+    
+    // WebSocket manager initialization
+    wsManager = new WebSocketManager(server);
 });
 
-module.exports = app;
+module.exports = { app, server, wsManager };

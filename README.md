@@ -68,7 +68,7 @@ python3 -m http.server 8081
 ```
 
 ### 4. 管理画面設定
-1. http://localhost:8081/admin.html にアクセス
+1. http://localhost:8081 にアクセス
 2. ログイン（admin / chloe2025）
 3. YouTube設定でAPIキーと動画IDを設定
 4. 監視開始
@@ -89,6 +89,8 @@ python3 -m http.server 8081
 
 ### セキュリティ機能
 - **認証保護**: 管理画面のセッション認証
+- **ファイル隠蔽**: admin.html → index.html による推測攻撃防止
+- **ディレクトリ保護**: 直接アクセスでの管理画面表示
 - **APIキー分離**: フロントエンドでのAPIキー露出防止
 - **レート制限**: API濫用防止
 - **ログ監視**: 全操作の記録・監視
@@ -111,10 +113,11 @@ chatbot_sage/
 - **[技術仕様書](docs/SPECIFICATION.md)**: 詳細な技術仕様
 - **[YouTube API設定](docs/YOUTUBE_API_SETUP.md)**: YouTube API設定ガイド
 - **[アーキテクチャ分離計画](docs/ARCHITECTURE_SEPARATION_PLAN.md)**: システム設計文書
+- **[管理画面セキュリティ強化](docs/ADMIN_SECURITY_ENHANCEMENT.md)**: セキュリティ改善実装レポート
 
 ## 変更履歴
 
-- **v3.0.0** (2025/6/11): セキュリティアーキテクチャ分離、YouTubeライブチャット完全統合
+- **v3.0.0** (2025/6/11): セキュリティアーキテクチャ分離、YouTubeライブチャット完全統合、管理画面セキュリティ強化
 - **v2.4.0** (2025/6/8): Natori性格システム完全実装
 - **v2.3.0** (2025/6/8): プロジェクト整理・最適化、リップシンク機能強化
 - **v2.2.0** (2025/6/7): 感情表現制御システム改善

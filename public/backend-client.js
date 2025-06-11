@@ -18,10 +18,11 @@ class BackendClient {
     }
 
     setupElements() {
-        this.statusIndicator = document.getElementById('youtube-monitoring-indicator');
-        this.statusDetails = document.getElementById('youtube-status-details');
-        this.videoInfo = document.getElementById('current-video-info');
-        this.messageCount = document.getElementById('processed-message-count');
+        // YouTube関連のUI要素は削除されたため、参照のみ保持（エラー防止）
+        this.statusIndicator = null;
+        this.statusDetails = null;
+        this.videoInfo = null;
+        this.messageCount = null;
     }
 
     async checkYouTubeStatus() {
@@ -43,7 +44,12 @@ class BackendClient {
     updateYouTubeStatus(status) {
         this.youtubeStatus = status;
         
-        if (!this.statusIndicator) return;
+        // UI要素が削除されているため、ステータス表示は管理画面でのみ行う
+        // ステータス情報は内部で保持し続ける
+        if (!this.statusIndicator) {
+            console.log('📺 YouTube監視ステータス:', status.isMonitoring ? '監視中' : '未接続');
+            return;
+        }
 
         const statusDot = this.statusIndicator.querySelector('.status-dot');
         const statusText = this.statusIndicator.querySelector('.status-text');

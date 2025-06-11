@@ -64,34 +64,6 @@
         <div class="chatbot-container">
             <h1>Gemini Chatbot with Natori</h1>
             
-            <!-- YouTube Live Chat Integration Settings -->
-            <div class="youtube-settings" id="youtube-settings">
-                <div class="settings-header" onclick="toggleYouTubeSettings()">
-                    <h3>📺 YouTube ライブチャット連携</h3>
-                    <span class="settings-toggle">▼</span>
-                </div>
-                <div class="settings-content collapsed" id="youtube-settings-content">
-                    <div class="setting-item">
-                        <label for="youtube-api-key">YouTube API Key:</label>
-                        <input type="password" id="youtube-api-key" placeholder="YouTube Data API v3 キー">
-                    </div>
-                    <div class="setting-item">
-                        <label for="video-id">ライブ配信ID:</label>
-                        <input type="text" id="video-id" placeholder="動画IDまたはライブ配信URL">
-                    </div>
-                    <div class="setting-item">
-                        <label for="chat-check-interval">チェック間隔（秒）:</label>
-                        <input type="number" id="chat-check-interval" value="10" min="5" max="60">
-                    </div>
-                    <div class="youtube-controls">
-                        <button id="youtube-connect-btn" class="youtube-btn">🔗 チャット監視開始</button>
-                        <button id="youtube-disconnect-btn" class="youtube-btn disconnect" style="display: none;">⏹️ 監視停止</button>
-                        <button id="youtube-help-btn" class="youtube-btn" style="background: #28a745;" onclick="showYouTubeHelp()">❓ 設定ヘルプ</button>
-                        <span id="youtube-status" class="status-indicator">未接続</span>
-                    </div>
-                </div>
-            </div>
-            
             <div class="chat-history" id="chat-history">
                 <div class="message bot-message">こんにちは！私はNatoriです。何か質問がありますか？</div>
             </div>

@@ -10,7 +10,7 @@ python3 -m http.server 8081
 ```
 
 ## アクセス
-- URL: http://localhost:8081/admin.html
+- URL: http://localhost:8081
 - ユーザー名: `admin`
 - パスワード: `chloe2025`
 
