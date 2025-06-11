@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini チャットボット with Live2D</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Live2D Cubism Core SDK -->
+    <script src="SDK/CubismSdkForWeb-5-r.4/Core/live2dcubismcore.min.js"></script>
+    <!-- PIXI.js -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.2.4/dist/pixi.min.js"></script>
+    <!-- PIXI Live2D Display - Cubism 4 Bundle -->
+    <script src="libs/cubism4.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Live2D キャラクター表示エリア -->
+        <div class="live2d-container">
+            <!-- Canvas は JavaScript で動的に作成されます -->
+            <div class="character-controls">
+                <button id="expression-happy" title="笑顔">😊</button>
+                <button id="expression-surprised" title="驚き">😮</button>
+                <button id="expression-sad" title="悲しみ">😢</button>
+                <button id="expression-angry" title="怒り">😠</button>
+                <button id="expression-normal" title="通常">😐</button>
+            </div>
+            
+            <!-- 感情分析デバッグパネル -->
+            <div class="emotion-debug-panel" id="emotion-debug" style="display:none;">
+                <h4>🧠 感情分析デバッグ</h4>
+                <div class="emotion-test-buttons">
+                    <button onclick="window.EmotionAnalyzer.testEmotion('happy')" class="emotion-btn">😊 幸せ</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('surprised')" class="emotion-btn">😮 驚き</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('sad')" class="emotion-btn">😢 悲しみ</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('angry')" class="emotion-btn">😠 怒り</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('excited')" class="emotion-btn">⚡ 興奮</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('thinking')" class="emotion-btn">🤔 思考</button>
+                    <button onclick="window.EmotionAnalyzer.testEmotion('neutral')" class="emotion-btn">😐 中立</button>
+                </div>
+                <div class="emotion-stats">
+                    <button onclick="console.log(window.EmotionAnalyzer.getEmotionStats())" class="stats-btn">📊 統計表示</button>
+                    <button onclick="window.EmotionTestSuite.runEmotionTests()" class="stats-btn">🧪 一括テスト</button>
+                    <button onclick="window.EmotionTestSuite.testSpecificEmotions()" class="stats-btn">🎯 特定感情テスト</button>
+                    <button onclick="window.runCompleteTest()" class="stats-btn">🚀 完全テスト</button>
+                    <button onclick="window.runQuickEmotionTest()" class="stats-btn">🧠 感情テスト</button>
+                    <button onclick="window.runQuickLive2DTest()" class="stats-btn">🎭 Live2Dテスト</button>
+                    <button onclick="window.testLipSync && window.testLipSync()" class="stats-btn">👄 リップシンクテスト</button>
+                </div>
+                <div class="personality-test-buttons">
+                    <button onclick="window.NatoriPersonality.debug.testAllTraits()" class="personality-btn">👸 性格特徴テスト</button>
+                    <button onclick="window.NatoriPersonality.debug.testSpecialResponses()" class="personality-btn">🌟 特別応答テスト</button>
+                    <button onclick="window.NatoriPersonality.debug.showSystemPrompt()" class="personality-btn">📜 システムプロンプト</button>
+                    <button onclick="window.NatoriPersonality.debug.testEmotionalModifier('happy')" class="personality-btn">😊 幸せ修飾</button>
+                    <button onclick="window.NatoriPersonality.debug.testEmotionalModifier('shy')" class="personality-btn">😳 恥ずかしがり</button>
+                    <button onclick="document.getElementById('emotion-debug').style.display='none'" class="close-btn">❌ 閉じる</button>
+                </div>
+            </div>
+            
+            <!-- デバッグボタン -->
+            <button id="toggle-debug" class="debug-toggle" onclick="document.getElementById('emotion-debug').style.display=document.getElementById('emotion-debug').style.display==='none'?'block':'none'">🔧</button>
+        </div>
+        
+        <!-- チャットボットエリア -->
+        <div class="chatbot-container">
+            <h1>Gemini Chatbot with Natori</h1>
+            
+            <!-- YouTube監視状況表示（読み取り専用） -->
+            <div class="youtube-status-display" id="youtube-status-display">
+                <div class="status-header">
+                    <h3>📺 YouTube ライブチャット</h3>
+                    <span id="youtube-monitoring-indicator" class="status-indicator offline">
+                        <span class="status-dot"></span>
+                        <span class="status-text">未接続</span>
+                    </span>
+                </div>
+                <div class="status-details" id="youtube-status-details" style="display: none;">
+                    <p>📺 ライブ配信: <span id="current-video-info">未設定</span></p>
+                    <p>💬 処理済みメッセージ: <span id="processed-message-count">0</span></p>
+                </div>
+                <div class="admin-link">
+                    <p><small>設定変更は <a href="http://localhost:8081" target="_blank">管理画面</a> で行えます</small></p>
+                </div>
+            </div>
+            
+            <div class="chat-history" id="chat-history">
+                <div class="message bot-message">こんにちは！私はNatoriです。何か質問がありますか？</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="user-input" placeholder="メッセージを入力...">
+                <div class="button-group">
+                    <button id="send-button">送信</button>
+                    <button id="voice-toggle" title="音声ON/OFF">🔊</button>
+                    <button id="stop-speech" title="音声停止">⏸️</button>
+                    <button id="voice-engine-toggle" title="音声エンジン切り替え">🎵</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live2D PIXI Integration Script -->
+    <script src="live2d-pixi.js"></script>
+    <!-- Natori Personality System -->
+    <script src="natori-personality.js"></script>
+    <!-- Emotion Analysis Engine v2.0 -->
+    <script src="emotion-analyzer-v2.js"></script>
+    <!-- Emotion Analysis Test Suite -->
+    <script src="test-emotion-responses.js"></script>
+    <!-- Emotion Analysis Debugger -->
+    <script src="emotion-debugger.js"></script>
+    <!-- Emotion Test Mock (for testing without API calls) -->
+    <script src="emotion-test-mock.js"></script>
+    <!-- Test Fixes -->
+    <script src="test-fixes.js"></script>
+    <!-- Chloe's Comprehensive Test Suite -->
+    <script src="chloe-test-suite.js"></script>
+    <!-- Chloe's Quick Test Messages -->
+    <script src="chloe-quick-test.js"></script>
+    <!-- Chloe's Lip Sync Test Suite -->
+    <script src="lip-sync-test.js"></script>
+    <!-- Backend Communication -->
+    <script src="backend-client.js"></script>
+    <!-- Main Chatbot Script -->
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Sage - 管理画面</title>
+    <link rel="stylesheet" href="admin-style.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- ログイン画面 -->
+        <div id="login-screen" class="login-screen">
+            <div class="login-card">
+                <h1>🔐 Chatbot Sage 管理画面</h1>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">ユーザー名:</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">パスワード:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="login-btn">ログイン</button>
+                </form>
+                <div id="login-error" class="error-message"></div>
+            </div>
+        </div>
+
+        <!-- メイン管理画面 -->
+        <div id="admin-screen" class="admin-screen" style="display: none;">
+            <!-- ヘッダー -->
+            <header class="admin-header">
+                <h1>📺 Chatbot Sage 管理画面</h1>
+                <div class="header-actions">
+                    <span id="user-info"></span>
+                    <button id="logout-btn" class="logout-btn">ログアウト</button>
+                </div>
+            </header>
+
+            <!-- ナビゲーション -->
+            <nav class="admin-nav">
+                <button class="nav-btn active" data-tab="dashboard">📊 ダッシュボード</button>
+                <button class="nav-btn" data-tab="youtube">📺 YouTube設定</button>
+                <button class="nav-btn" data-tab="system">⚙️ システム設定</button>
+                <button class="nav-btn" data-tab="logs">📝 ログ</button>
+            </nav>
+
+            <!-- メインコンテンツ -->
+            <main class="admin-main">
+                <!-- ダッシュボード -->
+                <div id="dashboard-tab" class="tab-content active">
+                    <h2>📊 システム状況</h2>
+                    
+                    <div class="status-grid">
+                        <div class="status-card">
+                            <h3>YouTube 監視状況</h3>
+                            <div class="status-indicator" id="youtube-monitoring-status">
+                                <span class="status-dot offline"></span>
+                                <span class="status-text">停止中</span>
+                            </div>
+                            <div class="status-details" id="youtube-details">
+                                <p>ライブチャットID: <span id="live-chat-id">未設定</span></p>
+                                <p>処理済みメッセージ: <span id="processed-messages">0</span></p>
+                            </div>
+                        </div>
+
+                        <div class="status-card">
+                            <h3>システム情報</h3>
+                            <div class="status-details">
+                                <p>サーバー状態: <span id="server-status" class="status-online">稼働中</span></p>
+                                <p>最終更新: <span id="last-update">-</span></p>
+                                <p>稼働時間: <span id="uptime">-</span></p>
+                            </div>
+                        </div>
+
+                        <div class="status-card">
+                            <h3>最新ログ</h3>
+                            <div id="recent-logs" class="recent-logs">
+                                <p>ログを読み込み中...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- YouTube設定 -->
+                <div id="youtube-tab" class="tab-content">
+                    <h2>📺 YouTube ライブチャット設定</h2>
+                    
+                    <form id="youtube-config-form">
+                        <div class="form-group">
+                            <label for="youtube-api-key">YouTube Data API v3 キー:</label>
+                            <div class="api-key-input-group">
+                                <input type="password" id="youtube-api-key" placeholder="AIzaSy... (39文字のAPIキー)">
+                                <button type="button" id="toggle-api-key-visibility" class="toggle-visibility-btn" title="APIキーの表示/非表示を切り替え">👁️</button>
+                            </div>
+                            <small>Google Cloud ConsoleでYouTube Data API v3を有効化してAPIキーを取得してください</small>
+                        </div>
+
+                        <div class="api-key-setup-guide" style="margin-top: 1rem;">
+                            <details>
+                                <summary>🔧 APIキー制限設定のトラブルシューティング</summary>
+                                <div class="setup-guide-content">
+                                    <h4>HTTPリファラー制限エラーの解決方法</h4>
+                                    <p><strong>エラー:</strong> "Requests from referer &lt;empty&gt; are blocked"</p>
+                                    
+                                    <h5>解決策 1: 制限を「なし」に設定（推奨）</h5>
+                                    <ol>
+                                        <li>Google Cloud Console → APIとサービス → 認証情報</li>
+                                        <li>使用中のAPIキーをクリック</li>
+                                        <li>「アプリケーションの制限」で「なし」を選択</li>
+                                        <li>「保存」をクリック</li>
+                                    </ol>
+                                    
+                                    <h5>解決策 2: HTTPリファラーにサーバーURLを追加</h5>
+                                    <ol>
+                                        <li>「アプリケーションの制限」で「HTTPリファラー」を選択</li>
+                                        <li>以下のURLを追加:</li>
+                                        <ul>
+                                            <li><code>localhost/*</code></li>
+                                            <li><code>127.0.0.1/*</code></li>
+                                            <li><code>http://localhost:8081/*</code></li>
+                                        </ul>
+                                        <li>「保存」をクリック</li>
+                                    </ol>
+                                    
+                                    <div class="warning-box">
+                                        <strong>⚠️ 注意:</strong> 本番環境では適切なリファラー制限を設定してください
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="video-id">ライブ配信ID:</label>
+                            <input type="text" id="video-id" placeholder="例: dQw4w9WgXcQ または https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+                            <small>現在ライブ配信中の動画のIDまたはURLを入力してください</small>
+                            
+                            <div class="video-id-help" style="margin-top: 0.5rem;">
+                                <details>
+                                    <summary>📝 対応する入力形式</summary>
+                                    <div class="help-content">
+                                        <ul>
+                                            <li><code>https://www.youtube.com/watch?v=VIDEO_ID</code></li>
+                                            <li><code>https://youtu.be/VIDEO_ID</code></li>
+                                            <li><code>https://www.youtube.com/live/VIDEO_ID</code></li>
+                                            <li><code>VIDEO_ID</code> (11文字の動画ID直接入力)</li>
+                                        </ul>
+                                        <p><strong>注意:</strong> ライブチャットが有効なライブ配信のみ対応</p>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="check-interval">チェック間隔（秒）:</label>
+                            <input type="number" id="check-interval" min="5" max="60" value="10">
+                            <small>ライブチャットをチェックする間隔（5-60秒）</small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="check-api-availability" class="check-btn">🔍 API可用性チェック</button>
+                            <button type="button" id="test-connection" class="test-btn">🧪 接続テスト</button>
+                            <button type="submit" class="save-btn">💾 設定保存</button>
+                        </div>
+                    </form>
+
+                    <div id="youtube-test-result" class="test-result"></div>
+
+                    <div class="monitoring-controls">
+                        <h3>監視制御</h3>
+                        <div class="control-buttons">
+                            <button id="start-monitoring" class="start-btn">🎬 監視開始</button>
+                            <button id="stop-monitoring" class="stop-btn" disabled>⏹️ 監視停止</button>
+                        </div>
+                        <div id="monitoring-status" class="monitoring-status">
+                            <span class="status-dot offline"></span>
+                            <span>監視停止中</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- システム設定 -->
+                <div id="system-tab" class="tab-content">
+                    <h2>⚙️ システム設定</h2>
+                    
+                    <form id="system-config-form">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="enable-logging" checked>
+                                ログ記録を有効にする
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="log-level">ログレベル:</label>
+                            <select id="log-level">
+                                <option value="error">エラーのみ</option>
+                                <option value="warn">警告以上</option>
+                                <option value="info" selected>情報以上</option>
+                                <option value="debug">すべて</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="max-log-entries">最大ログ保存数:</label>
+                            <input type="number" id="max-log-entries" min="100" max="10000" value="1000">
+                        </div>
+
+                        <button type="submit" class="save-btn">💾 設定保存</button>
+                    </form>
+                </div>
+
+                <!-- ログ -->
+                <div id="logs-tab" class="tab-content">
+                    <h2>📝 システムログ</h2>
+                    
+                    <div class="logs-controls">
+                        <div class="filter-controls">
+                            <label for="log-filter-level">レベル:</label>
+                            <select id="log-filter-level">
+                                <option value="">すべて</option>
+                                <option value="error">エラー</option>
+                                <option value="warn">警告</option>
+                                <option value="info">情報</option>
+                                <option value="debug">デバッグ</option>
+                            </select>
+                            <button id="refresh-logs" class="refresh-btn">🔄 更新</button>
+                            <button id="clear-logs" class="clear-btn">🗑️ ログクリア</button>
+                        </div>
+                    </div>
+
+                    <div id="logs-container" class="logs-container">
+                        <p>ログを読み込み中...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>

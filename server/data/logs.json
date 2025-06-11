@@ -1,0 +1,398 @@
+[
+  {
+    "id": "mbribr56cnuiip1ufm",
+    "timestamp": "2025-06-11T05:26:24.042Z",
+    "level": "info",
+    "message": "YouTubeメッセージ受信",
+    "data": {
+      "author": "江崎道朗",
+      "text": "もう一度、メッセージの送信テストです。このメッセージが届いたら、届いたあるよ！と言ってください",
+      "messageId": "LCC.EhwKGkNQYjRtb2JRNkkwREZhUEp3Z1FkOVFFZzZR"
+    }
+  },
+  {
+    "id": "mbribr550ht1n7ewizk",
+    "timestamp": "2025-06-11T05:26:24.041Z",
+    "level": "info",
+    "message": "YouTubeメッセージ受信",
+    "data": {
+      "author": "江崎道朗",
+      "text": "チャットのテストをしています",
+      "messageId": "LCC.EhwKGkNJSEk0Y0hONkkwREZVOF9yUVlkQlM4V3R3"
+    }
+  },
+  {
+    "id": "mbribr53mqq754ndxoq",
+    "timestamp": "2025-06-11T05:26:24.039Z",
+    "level": "info",
+    "message": "YouTubeメッセージ受信",
+    "data": {
+      "author": "conditionyellow",
+      "text": "チャット送信テスト",
+      "messageId": "LCC.EhwKGkNMQ2JyWkRONkkwREZURFF3Z1FkdUtRZVRR"
+    }
+  },
+  {
+    "id": "mbribr4tpnnaazpo4t",
+    "timestamp": "2025-06-11T05:26:24.029Z",
+    "level": "info",
+    "message": "YouTube監視停止",
+    "data": {}
+  },
+  {
+    "id": "mbri790vzcqp4ktau18",
+    "timestamp": "2025-06-11T05:22:53.935Z",
+    "level": "info",
+    "message": "YouTubeメッセージ受信",
+    "data": {
+      "author": "江崎道朗",
+      "text": "もう一度、メッセージの送信テストです。このメッセージが届いたら、届いたあるよ！と言ってください",
+      "messageId": "LCC.EhwKGkNQYjRtb2JRNkkwREZhUEp3Z1FkOVFFZzZR"
+    }
+  },
+  {
+    "id": "mbri4oemmo7xj17ar0c",
+    "timestamp": "2025-06-11T05:20:53.902Z",
+    "level": "info",
+    "message": "YouTubeメッセージ受信",
+    "data": {
+      "author": "江崎道朗",
+      "text": "チャットのテストをしています",
+      "messageId": "LCC.EhwKGkNJSEk0Y0hONkkwREZVOF9yUVlkQlM4V3R3"
+    }
+  },
+  {
+    "id": "mbri4oekrtpgqjug99j",
+    "timestamp": "2025-06-11T05:20:53.900Z",
+    "level": "info",
+    "message": "YouTubeメッセージ受信",
+    "data": {
+      "author": "conditionyellow",
+      "text": "チャット送信テスト",
+      "messageId": "LCC.EhwKGkNMQ2JyWkRONkkwREZURFF3Z1FkdUtRZVRR"
+    }
+  },
+  {
+    "id": "mbri4gkgahh2eflvy7o",
+    "timestamp": "2025-06-11T05:20:43.744Z",
+    "level": "info",
+    "message": "YouTube監視開始",
+    "data": {
+      "videoId": "cHf3Yrqwyjo",
+      "liveChatId": "Cg0KC2NIZjNZcnF3eWpvKicKGFVDeFh1MWE4NzFxYm1MNi1qVTdZQmcyURILY0hmM1lycXd5am8",
+      "interval": 10
+    }
+  },
+  {
+    "id": "mbri4gk74abivweivc3",
+    "timestamp": "2025-06-11T05:20:43.735Z",
+    "level": "info",
+    "message": "ライブチャットID取得成功",
+    "data": {
+      "videoId": "cHf3Yrqwyjo",
+      "liveChatId": "Cg0KC2NIZjNZcnF3eWpvKicKGFVDeFh1MWE4NzFxYm1MNi1qVTdZQmcyURILY0hmM1lycXd5am8"
+    }
+  },
+  {
+    "id": "mbri4c4gh7km1xd4go5",
+    "timestamp": "2025-06-11T05:20:37.984Z",
+    "level": "info",
+    "message": "YouTube動画接続テスト成功",
+    "data": {
+      "videoId": "cHf3Yrqwyjo",
+      "title": "YouTube Live Chat Test 2",
+      "liveChatId": "Cg0KC2NIZjNZcnF3eWpvKicKGFVDeFh1MWE4NzFxYm1MNi1qVTdZQmcyURILY0hmM1lycXd5am8"
+    }
+  },
+  {
+    "id": "mbri4c1rx32ezc6ddo9",
+    "timestamp": "2025-06-11T05:20:37.887Z",
+    "level": "info",
+    "message": "YouTube動画ID抽出成功",
+    "data": {
+      "originalInput": "cHf3Yrqwyjo",
+      "extractedId": "cHf3Yrqwyjo"
+    }
+  },
+  {
+    "id": "mbri4c1clm4gm4sutk8",
+    "timestamp": "2025-06-11T05:20:37.872Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhpfr1dqhyh6pw9a",
+    "timestamp": "2025-06-11T05:09:02.845Z",
+    "level": "info",
+    "message": "YouTube監視開始（テスト）",
+    "data": {
+      "videoId": "cHf3Yrqwyjo"
+    }
+  },
+  {
+    "id": "mbrhp5j4r7jjvz0lo9e",
+    "timestamp": "2025-06-11T05:08:49.600Z",
+    "level": "info",
+    "message": "YouTube動画接続テスト成功",
+    "data": {
+      "videoId": "cHf3Yrqwyjo",
+      "title": "YouTube Live Chat Test 2",
+      "liveChatId": "Cg0KC2NIZjNZcnF3eWpvKicKGFVDeFh1MWE4NzFxYm1MNi1qVTdZQmcyURILY0hmM1lycXd5am8"
+    }
+  },
+  {
+    "id": "mbrhp5gjw9rnb32rpzi",
+    "timestamp": "2025-06-11T05:08:49.507Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhmhnef4cl3shqnhf",
+    "timestamp": "2025-06-11T05:06:45.338Z",
+    "level": "info",
+    "message": "YouTube動画接続テスト成功",
+    "data": {
+      "videoId": "cHf3Yrqwyjo",
+      "title": "YouTube Live Chat Test 2",
+      "liveChatId": "Cg0KC2NIZjNZcnF3eWpvKicKGFVDeFh1MWE4NzFxYm1MNi1qVTdZQmcyURILY0hmM1lycXd5am8"
+    }
+  },
+  {
+    "id": "mbrhmhkt3ix3ok2wpg5",
+    "timestamp": "2025-06-11T05:06:45.245Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhm810dz88oh0v5x8",
+    "timestamp": "2025-06-11T05:06:32.868Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhlfyrprturoonvs",
+    "timestamp": "2025-06-11T05:05:56.499Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhl71zojfms4ad3pg",
+    "timestamp": "2025-06-11T05:05:44.951Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhkm0qpj0gay0qab8",
+    "timestamp": "2025-06-11T05:05:17.690Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrheun85oeh2znh9om",
+    "timestamp": "2025-06-11T05:00:48.932Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhdzqibwoafyp9upa",
+    "timestamp": "2025-06-11T05:00:08.874Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhd67jzwfrt2udrnh",
+    "timestamp": "2025-06-11T04:59:30.607Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrhcj6eika1rd1qoo",
+    "timestamp": "2025-06-11T04:59:00.758Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrh6ibcj7k6cahit3o",
+    "timestamp": "2025-06-11T04:54:19.704Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrh4la7nqekx5x6u5k",
+    "timestamp": "2025-06-11T04:52:50.239Z",
+    "level": "info",
+    "message": "YouTube API接続テスト成功",
+    "data": {
+      "quotaUsed": "search request (100 units)",
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrgozsojchviuworrl",
+    "timestamp": "2025-06-11T04:40:42.553Z",
+    "level": "error",
+    "message": "YouTube API接続テスト失敗",
+    "data": {
+      "status": 403,
+      "error": {
+        "error": {
+          "code": 403,
+          "message": "Requests from referer <empty> are blocked.",
+          "errors": [
+            {
+              "message": "Requests from referer <empty> are blocked.",
+              "domain": "global",
+              "reason": "forbidden"
+            }
+          ],
+          "status": "PERMISSION_DENIED",
+          "details": [
+            {
+              "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+              "reason": "API_KEY_HTTP_REFERRER_BLOCKED",
+              "domain": "googleapis.com",
+              "metadata": {
+                "service": "youtube.googleapis.com",
+                "httpReferrer": "<empty>",
+                "consumer": "projects/636074041441"
+              }
+            },
+            {
+              "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
+              "locale": "en-US",
+              "message": "Requests from referer <empty> are blocked."
+            }
+          ]
+        }
+      },
+      "apiKeyPrefix": "AIzaSyDK"
+    }
+  },
+  {
+    "id": "mbrg44b3itvyrwspmw",
+    "timestamp": "2025-06-11T04:24:28.623Z",
+    "level": "error",
+    "message": "YouTube API接続テスト失敗",
+    "data": {
+      "status": 403,
+      "error": {
+        "error": {
+          "code": 403,
+          "message": "Requests from referer <empty> are blocked.",
+          "errors": [
+            {
+              "message": "Requests from referer <empty> are blocked.",
+              "domain": "global",
+              "reason": "forbidden"
+            }
+          ],
+          "status": "PERMISSION_DENIED",
+          "details": [
+            {
+              "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+              "reason": "API_KEY_HTTP_REFERRER_BLOCKED",
+              "domain": "googleapis.com",
+              "metadata": {
+                "service": "youtube.googleapis.com",
+                "httpReferrer": "<empty>",
+                "consumer": "projects/636074041441"
+              }
+            },
+            {
+              "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
+              "locale": "en-US",
+              "message": "Requests from referer <empty> are blocked."
+            }
+          ]
+        }
+      },
+      "apiKeyPrefix": "AIzaSyBa"
+    }
+  },
+  {
+    "id": "mbrfy3ztmb4u25jbf8e",
+    "timestamp": "2025-06-11T04:19:48.281Z",
+    "level": "error",
+    "message": "YouTube API接続テスト失敗",
+    "data": {
+      "status": 400,
+      "error": {
+        "error": {
+          "code": 400,
+          "message": "API key not valid. Please pass a valid API key.",
+          "errors": [
+            {
+              "message": "API key not valid. Please pass a valid API key.",
+              "domain": "global",
+              "reason": "badRequest"
+            }
+          ],
+          "status": "INVALID_ARGUMENT",
+          "details": [
+            {
+              "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+              "reason": "API_KEY_INVALID",
+              "domain": "googleapis.com",
+              "metadata": {
+                "service": "youtube.googleapis.com"
+              }
+            },
+            {
+              "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
+              "locale": "en-US",
+              "message": "API key not valid. Please pass a valid API key."
+            }
+          ]
+        }
+      }
+    }
+  }
+]
